@@ -98,7 +98,7 @@ def fetch_cmd(args: argparse.Namespace) -> None:
 
 
 def main(argv: Optional[list[str]] = None) -> None:
-    """ """
+    """Parse CLI arguments and dispatch to subcommands."""
     _loglevel_: str = "WARNING"
     parser = argparse.ArgumentParser(description="get from CC-NEWS")
     parser.add_argument(

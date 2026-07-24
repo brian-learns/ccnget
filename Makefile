@@ -27,7 +27,7 @@ check:
 	uv run ty check src/
 
 	@echo "\n— [Interrogate a codebase for docstring coverage](https://interrogate.readthedocs.io/en/latest/)"
-	#uv run interrogate src/
+	uv run interrogate src/
 
 test: check
 	uv run pytest -v --durations=5
@@ -45,7 +45,7 @@ checkdeps:
 	@echo "All required commands are available."
 
 testpackages:
-	uv add --dev ruff bandit vulture refurb ty pytest #interrogate
+	uv add --dev ruff bandit vulture refurb ty pytest interrogate
 
 export GIT_CEILING_DIRECTORIES	# can influence `uv init` behaviour
 pyproject.toml:
