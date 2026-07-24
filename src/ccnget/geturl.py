@@ -2,22 +2,17 @@ import argparse
 import json
 import logging
 import sys
+from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
 import requests
+from warcio.archiveiterator import ArchiveIterator
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-BASE_URL = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
-
-
-def valid_dir(path_string: str) -> Path:
-    """valid_dir helper for argparse"""
-    path: Path = Path(path_string)
-    if not path.is_dir():
-        raise argparse.ArgumentTypeError(f"'{path_string}' is not a directory.")
-    return path
+LOOKUP_URL = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
+CC_CRAWL_BASE_URL = "https://data.commoncrawl.org"
 
 
 def limited_int(val_str):
@@ -33,42 +28,86 @@ def limited_int(val_str):
     return val
 
 
-def main(argv: Optional[argparse.Namespace] = None) -> None:
+def lookup_cmd(args: argparse.Namespace) -> None:
+    """Execute the lookup subcommand."""
+    params = {
+        "url": args.url,
+        "exact": args.exact,
+        "limit": args.limit,
+    }
+
+    logger.debug("Requesting %s with params %s", LOOKUP_URL, params)
+
+    response = requests.get(LOOKUP_URL, params=params, timeout=30)
+    response.raise_for_status()
+
+    print(json.dumps(response.json(), indent=2))
+
+
+def retrieve_cmd(args: argparse.Namespace) -> None:
+    """Execute the retrieve subcommand."""
+    warc_url = f"{CC_CRAWL_BASE_URL}/{args.warc_path}"
+    start = args.offset
+    end = start + args.length - 1
+
+    headers = {"Range": f"bytes={start}-{end}"}
+    logger.debug("Requesting %s Range: bytes=%d-%d", warc_url, start, end)
+
+    response = requests.get(warc_url, headers=headers, timeout=60)
+    response.raise_for_status()
+
+    for record in ArchiveIterator(BytesIO(response.content)):
+        if record.rec_type == "response":
+            payload = record.content_stream().read()
+            if args.output:
+                Path(args.output).write_bytes(payload)
+                logger.info("Wrote %d bytes to %s", len(payload), args.output)
+            else:
+                sys.stdout.buffer.write(payload)
+            return
+
+    logger.error("No response record found in WARC data")
+
+
+def main(argv: Optional[list[str]] = None) -> None:
     """ """
     _loglevel_: str = "WARNING"
     parser = argparse.ArgumentParser(description="get from CC-NEWS")
-    parser.add_argument("url")
-    parser.add_argument("--exact", action="store_true")
-    parser.add_argument("--limit", type=limited_int, default=100, help="Limit value (1-1000, default: 100)")
     parser.add_argument(
         "--loglevel",
         default=_loglevel_,
         help="".join(["CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is ", _loglevel_]),
     )
 
-    if argv is None:
-        argv = parser.parse_args()
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # lookup subcommand
+    lookup_parser = subparsers.add_parser("lookup", help="Lookup URLs in CC-NEWS index")
+    lookup_parser.add_argument("url")
+    lookup_parser.add_argument("--exact", action="store_true")
+    lookup_parser.add_argument("--limit", type=limited_int, default=100, help="Limit value (1-1000, default: 100)")
+
+    # retrieve subcommand
+    retrieve_parser = subparsers.add_parser("retrieve", help="Retrieve WARC records from Common Crawl")
+    retrieve_parser.add_argument("--warc-path", required=True, help="WARC path from lookup results")
+    retrieve_parser.add_argument("--offset", type=int, required=True, help="Byte offset in WARC file")
+    retrieve_parser.add_argument("--length", type=int, required=True, help="Byte length of record")
+    retrieve_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
+
+    args = parser.parse_args(argv)
 
     # set debugging level
-    numeric_level: Optional[int] = getattr(logging, argv.loglevel.upper(), None)
+    numeric_level: Optional[int] = getattr(logging, args.loglevel.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % argv.loglevel)
+        raise ValueError("Invalid log level: %s" % args.loglevel)
     logging.basicConfig(
         level=numeric_level,
     )
 
-    params = {
-        "url": argv.url,
-        "exact": argv.exact,
-        "limit": argv.limit,
-    }
-
-    logger.debug("Requesting %s with params %s", BASE_URL, params)
-
-    response = requests.get(BASE_URL, params=params, timeout=30)
-    response.raise_for_status()
-
-    print(json.dumps(response.json(), indent=2))
+    if args.command == "lookup":
+        lookup_cmd(args)
+    elif args.command == "retrieve":
+        retrieve_cmd(args)
 
 
 # main() idiom for importing into REPL for debugging

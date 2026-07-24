@@ -1,0 +1,13 @@
+
+    {
+      "surt_key": "com,cnn)/2004/world/americas/04/16/jobs",
+      "timestamp": "20170104172515",
+      "warc_path": "crawl-data/CC-NEWS/2017/01/CC-NEWS-20170104153443-00054.warc.gz",
+      "offset": 571511496,
+      "length": 11236
+    }
+
+
+warc_path
+ - https://data.commoncrawl.org/crawl-data/CC-NEWS/2017/01/CC-NEWS-20170104153443-00054.warc.gz
+ - s3://commoncrawl.org/crawl-data/CC-NEWS/2017/01/CC-NEWS-20170104153443-00054.warc.gz

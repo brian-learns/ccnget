@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "requests>=2.31.0",
+    "warcio>=1.8.1",
 ]
 
 [project.scripts]
