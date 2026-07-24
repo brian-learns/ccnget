@@ -1,6 +1,6 @@
 # ccnget
 
-CLI for querying the Common Crawl News (CC-NEWS) index and retrieving archived web pages.
+CLI for querying a [Common Crawl News index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) and retrieving archived web pages from CC-NEWS Common Crawl WARC files.
 
 ## Install
 
@@ -12,7 +12,7 @@ uv sync
 
 ### Lookup
 
-Search the [CC-NEWS index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) for a URL:
+Search a [CC-NEWS index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) for a URL:
 
 ```bash
 ccnget lookup "http://www.cnn.com" --limit 5
