@@ -44,11 +44,11 @@ def lookup_cmd(args: argparse.Namespace) -> None:
     print(json.dumps(response.json(), indent=2))
 
 
-def retrieve_cmd(args: argparse.Namespace) -> None:
-    """Execute the retrieve subcommand."""
-    warc_url = f"{CC_CRAWL_BASE_URL}/{args.warc_path}"
-    start = args.offset
-    end = start + args.length - 1
+def retrieve_record(warc_path: str, offset: int, length: int, output: Optional[str] = None) -> None:
+    """Retrieve a WARC record and write to stdout or file."""
+    warc_url = f"{CC_CRAWL_BASE_URL}/{warc_path}"
+    start = offset
+    end = start + length - 1
 
     headers = {"Range": f"bytes={start}-{end}"}
     logger.debug("Requesting %s Range: bytes=%d-%d", warc_url, start, end)
@@ -59,14 +59,42 @@ def retrieve_cmd(args: argparse.Namespace) -> None:
     for record in ArchiveIterator(BytesIO(response.content)):
         if record.rec_type == "response":
             payload = record.content_stream().read()
-            if args.output:
-                Path(args.output).write_bytes(payload)
-                logger.info("Wrote %d bytes to %s", len(payload), args.output)
+            if output:
+                Path(output).write_bytes(payload)
+                logger.info("Wrote %d bytes to %s", len(payload), output)
             else:
                 sys.stdout.buffer.write(payload)
             return
 
     logger.error("No response record found in WARC data")
+
+
+def retrieve_cmd(args: argparse.Namespace) -> None:
+    """Execute the retrieve subcommand."""
+    retrieve_record(args.warc_path, args.offset, args.length, args.output)
+
+
+def fetch_cmd(args: argparse.Namespace) -> None:
+    """Execute the fetch subcommand: lookup then retrieve the first result."""
+    params = {
+        "url": args.url,
+        "exact": args.exact,
+        "limit": 1,
+    }
+
+    logger.debug("Looking up %s", args.url)
+    response = requests.get(LOOKUP_URL, params=params, timeout=30)
+    response.raise_for_status()
+
+    results = response.json().get("results", [])
+
+    if not results:
+        logger.error("No results found for %s", args.url)
+        return
+
+    first = results[0]
+    logger.info("Found: %s at %s", first["surt_key"], first["timestamp"])
+    retrieve_record(first["warc_path"], first["offset"], first["length"], args.output)
 
 
 def main(argv: Optional[list[str]] = None) -> None:
@@ -94,6 +122,12 @@ def main(argv: Optional[list[str]] = None) -> None:
     retrieve_parser.add_argument("--length", type=int, required=True, help="Byte length of record")
     retrieve_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
 
+    # fetch subcommand (lookup + retrieve first result)
+    fetch_parser = subparsers.add_parser("fetch", help="Lookup and retrieve the first result")
+    fetch_parser.add_argument("url")
+    fetch_parser.add_argument("--exact", action="store_true")
+    fetch_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
+
     args = parser.parse_args(argv)
 
     # set debugging level
@@ -108,6 +142,8 @@ def main(argv: Optional[list[str]] = None) -> None:
         lookup_cmd(args)
     elif args.command == "retrieve":
         retrieve_cmd(args)
+    elif args.command == "fetch":
+        fetch_cmd(args)
 
 
 # main() idiom for importing into REPL for debugging

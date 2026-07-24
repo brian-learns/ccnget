@@ -7,7 +7,7 @@ import pytest
 from warcio.archiveiterator import ArchiveIterator
 from warcio.warcwriter import WARCWriter
 
-from ccnget.geturl import lookup_cmd, limited_int, main, retrieve_cmd
+from ccnget.geturl import fetch_cmd, lookup_cmd, limited_int, main, retrieve_cmd
 
 
 def _make_warc_response(payload: bytes) -> bytes:
@@ -180,3 +180,60 @@ class TestRetrieveCmd:
         expected_url = "https://data.commoncrawl.org/path/to/file.warc.gz"
         assert call_args[0][0] == expected_url
         assert call_args[1]["headers"]["Range"] == "bytes=500-599"
+
+
+class TestFetchCmd:
+    @patch("ccnget.geturl.requests.get")
+    def test_fetch_retrieves_first_result(self, mock_get, capsys):
+        lookup_response = MagicMock()
+        lookup_response.json.return_value = {
+            "results": [
+                {"surt_key": "com,example)/", "timestamp": "20170101000000", "warc_path": "test.warc.gz", "offset": 100, "length": 50}
+            ]
+        }
+
+        warc_content = _make_warc_response(b"<html>fetched</html>")
+        retrieve_response = MagicMock()
+        retrieve_response.content = warc_content
+
+        mock_get.side_effect = [lookup_response, retrieve_response]
+
+        args = argparse.Namespace(url="http://example.com", exact=False, output=None)
+        fetch_cmd(args)
+
+        captured = capsys.readouterr()
+        assert b"<html>fetched</html>" in captured.out.encode()
+        assert mock_get.call_count == 2
+
+    @patch("ccnget.geturl.requests.get")
+    def test_fetch_with_output_file(self, mock_get, tmp_path):
+        lookup_response = MagicMock()
+        lookup_response.json.return_value = {
+            "results": [
+                {"surt_key": "com,example)/", "timestamp": "20170101000000", "warc_path": "test.warc.gz", "offset": 200, "length": 75}
+            ]
+        }
+
+        warc_content = _make_warc_response(b"<html>file output</html>")
+        retrieve_response = MagicMock()
+        retrieve_response.content = warc_content
+
+        mock_get.side_effect = [lookup_response, retrieve_response]
+
+        output_file = tmp_path / "fetched.html"
+        args = argparse.Namespace(url="http://example.com", exact=True, output=str(output_file))
+        fetch_cmd(args)
+
+        assert output_file.exists()
+        assert output_file.read_bytes() == b"<html>file output</html>"
+
+    @patch("ccnget.geturl.requests.get")
+    def test_fetch_no_results(self, mock_get, capsys):
+        lookup_response = MagicMock()
+        lookup_response.json.return_value = {"results": []}
+        mock_get.return_value = lookup_response
+
+        args = argparse.Namespace(url="http://nonexistent.example", exact=False, output=None)
+        fetch_cmd(args)
+
+        assert mock_get.call_count == 1
