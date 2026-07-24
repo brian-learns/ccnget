@@ -7,7 +7,9 @@ authors = [
     { name = "Code Agent", email = "agent@yourdomain.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "requests>=2.31.0",
+]
 
 [project.scripts]
 ccnget = "ccnget.geturl:main"

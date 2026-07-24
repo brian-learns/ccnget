@@ -1,0 +1,13 @@
+
+API:
+docs
+https://brian-learns-cc-news-cdx-server.hf.space/openapi.json
+
+endpoint
+https://brian-learns-cc-news-cdx-server.hf.space/lookup
+
+uv run ccnget
+usage: ccnget [-h] [--exact] [--limit LIMIT] [--loglevel LOGLEVEL] url
+ccnget: error: the following arguments are required: url
+
+src/ccnget/geturl.py

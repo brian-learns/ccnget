@@ -1,10 +1,15 @@
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
 from typing import Optional
 
+import requests
+
 logger: logging.Logger = logging.getLogger(__name__)
+
+BASE_URL = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
 
 
 def valid_dir(path_string: str) -> Path:
@@ -51,7 +56,19 @@ def main(argv: Optional[argparse.Namespace] = None) -> None:
     logging.basicConfig(
         level=numeric_level,
     )
-    print("hey")
+
+    params = {
+        "url": argv.url,
+        "exact": argv.exact,
+        "limit": argv.limit,
+    }
+
+    logger.debug("Requesting %s with params %s", BASE_URL, params)
+
+    response = requests.get(BASE_URL, params=params, timeout=30)
+    response.raise_for_status()
+
+    print(json.dumps(response.json(), indent=2))
 
 
 # main() idiom for importing into REPL for debugging
