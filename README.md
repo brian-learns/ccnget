@@ -1,8 +1,10 @@
 # `ccnget` -- common crawl news get
 
-CLI for querying a [Common Crawl News index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) and retrieving archived web pages from CC-NEWS Common Crawl WARC files.
+October 4th, 2026, [Common Crawl Announced a News Dataset](https://commoncrawl.org/blog/news-dataset-available) "containing news articles from news sites all over the world."  
 
-Uses a [URL lookup tool](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server) served from a HuggingFace Space that indexes the [Common Crawl News Dataset](https://data.commoncrawl.org/crawl-data/CC-NEWS/index.html) in RocksDB provides a simple FastAPI `/lookup` endpoint.
+This repository contains a python command for looking up and retrieving URLs from the [WARC files on S3](https://data.commoncrawl.org/crawl-data/CC-NEWS/index.html).
+
+[`webrecorder/cdxj-indexer`](https://github.com/webrecorder/cdxj-indexer) was used to create a [Hugging Face Dataset `brian-learns/cdx-cc-news`](https://huggingface.co/datasets/brian-learns/cdx-cc-news) with CDXj sorted by month and parquet files.  Rocks DB was used to create a bloom filter index that powers a [URL lookup tool](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server) served from a HuggingFace Space that provides a simple FastAPI `/lookup` endpoint.
 
 ## Install
 
