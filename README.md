@@ -1,4 +1,4 @@
-# ccnget
+# `ccnget` -- common crawl news get
 
 CLI for querying a [Common Crawl News index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) and retrieving archived web pages from CC-NEWS Common Crawl WARC files.
 
