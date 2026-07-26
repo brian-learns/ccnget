@@ -1,6 +1,6 @@
 # `ccnget` -- common crawl news get
 
-October 4th, 2026, [Common Crawl Announced a News Dataset](https://commoncrawl.org/blog/news-dataset-available) "containing news articles from news sites all over the world."  
+[Common Crawl Announced a News Dataset](https://commoncrawl.org/blog/news-dataset-available) October 4th, 2016, "containing news articles from news sites all over the world."  Between then end of June 2016 over 1.4 billion news articles have been archived in the set.
 
 This repository contains a python command for looking up and retrieving URLs from the [WARC files on S3](https://data.commoncrawl.org/crawl-data/CC-NEWS/index.html).
 
