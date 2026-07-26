@@ -64,8 +64,8 @@ While most of this was vibe coded, I drew this architecture diagram in momodraw 
                  ▼                    ││          
  ┌────────────────────────────────┐   ││          
  │Huggingface Dataset             │   ││          
- │ - cdxj file per month 115 GB   │   ││          
- │ - (parquet per month)          │   ││          
+ │ - cdxj file per month          │   ││          
+ │ - 115 GB, 119 files            │   ││          
  └───────────────┬────────────────┘   ││  range   
                  │                    ││ request  
                  │                    ││          
