@@ -51,6 +51,39 @@ Lookup and retrieve the first result in one step:
 uv run ccnget fetch "http://www.cnn.com" -o article.html
 ```
 
+## Diagram
+
+While most of this was vibe coded, I drew this architecture diagram in momodraw and came up with the basic approach.  Numbers are as of the first test retrospective build.  I'm not sure if I'm going to do prospective maintenance.
+```
+ ┌────────────────────────────────────────┐       
+ │  s3://commoncrawl/crawl-data/CC-NEWS/  │       
+ │           49.4 TiB raw WARC            │       
+ └───────────────┬────────────────────┬▲──┘       
+  streamed WARC  │                    ││          
+      files      │                    ││          
+                 ▼                    ││          
+ ┌────────────────────────────────┐   ││          
+ │Huggingface Dataset             │   ││          
+ │ - cdxj file per month 115 GB   │   ││          
+ │ - (parquet per month)          │   ││          
+ └───────────────┬────────────────┘   ││  range   
+                 │                    ││ request  
+                 │                    ││          
+                 ▼                    ││          
+ ┌────────────────────────────────┐   ││          
+ │Huggingface Space               │   ││          
+ │ - rocksdb (75.1 GB, 1116 files)│   ││          
+ │ - fastapi /lookup?             │   ││          
+ └────┬▲──────────────────────────┘   ││          
+      ││                              ││          
+      ││                              ││          
+      ▼│                              ▼│          
+ ┌────────────────────────────────────────┐       
+ │                 ccnget                 │       
+ │   lookup                    retrieve   │       
+ └────────────────────────────────────────┘       
+```
+
 ## License
 
 BSD 3-Clause for the code in this revision control repository.
