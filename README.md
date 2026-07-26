@@ -53,7 +53,7 @@ uv run ccnget fetch "http://www.cnn.com" -o article.html
 
 ## Diagram
 
-While most of this was vibe coded, I drew this architecture diagram in momodraw and came up with the basic approach.  Numbers are as of the first test retrospective build.  I'm not sure if I'm going to do prospective maintenance.
+While most of this was vibe coded, I drew this architecture diagram in monodraw and came up with the basic approach.  Numbers are as of the first test retrospective build.  I'm not sure if I'm going to do prospective maintenance.
 ```
  ┌────────────────────────────────────────┐       
  │  s3://commoncrawl/crawl-data/CC-NEWS/  │       
