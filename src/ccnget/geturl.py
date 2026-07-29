@@ -1,18 +1,28 @@
 import argparse
 import json
 import logging
+import os
 import sys
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
 import requests
+from dotenv import load_dotenv
 from warcio.archiveiterator import ArchiveIterator
+
+load_dotenv()
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-CDX_LOOKUP_URL = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
-CC_CRAWL_BASE_URL = "https://data.commoncrawl.org"
+CDX_LOOKUP_URL = os.environ.get(
+    "CDX_LOOKUP_URL",
+    "https://brian-learns-cc-news-cdx-server.hf.space/lookup",
+)
+CC_CRAWL_BASE_URL = os.environ.get(
+    "CC_CRAWL_BASE_URL",
+    "https://data.commoncrawl.org",
+)
 
 
 def limited_int(val_str):

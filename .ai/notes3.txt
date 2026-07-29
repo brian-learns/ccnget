@@ -1,0 +1,7 @@
+right now, the config for this project is hardcoded in src/ccnget/geturl.py
+
+ 14 CDX_LOOKUP_URL = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
+ 15 CC_CRAWL_BASE_URL = "https://data.commoncrawl.org"
+
+
+Can you set up python-dotenv in the pyproject.toml and refactor the code to read the config from .env file or environmental variables?

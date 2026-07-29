@@ -19,7 +19,7 @@ uv add git+https://github.com/brian-learns/ccnget
 Search a [CC-NEWS index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) for a URL:
 
 ```bash
-uv run ccnget lookup "http://www.cnn.com" --limit 5
+uv run ccnget lookup "http://example.com" --limit 5
 ```
 
 ### Retrieve
@@ -48,7 +48,7 @@ uv run ccnget retrieve \
 Lookup and retrieve the first result in one step:
 
 ```bash
-uv run ccnget fetch "http://www.cnn.com" -o article.html
+uv run ccnget fetch "http://example.com" -o article.html
 ```
 
 ## Diagram
