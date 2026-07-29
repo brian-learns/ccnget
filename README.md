@@ -14,6 +14,12 @@ uv add git+https://github.com/brian-learns/ccnget
 
 ## Usage
 
+```bash
+❯ ccnget fetch http://example.com/ | uvx trafilatura
+This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.
+More information...
+```
+
 ### Lookup
 
 Search a [CC-NEWS index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) for a URL:
