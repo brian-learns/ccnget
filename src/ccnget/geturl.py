@@ -11,7 +11,7 @@ from warcio.archiveiterator import ArchiveIterator
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-LOOKUP_URL = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
+CDX_LOOKUP_URL = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
 CC_CRAWL_BASE_URL = "https://data.commoncrawl.org"
 
 
@@ -36,9 +36,9 @@ def lookup_cmd(args: argparse.Namespace) -> None:
         "limit": args.limit,
     }
 
-    logger.debug("Requesting %s with params %s", LOOKUP_URL, params)
+    logger.debug("Requesting %s with params %s", CDX_LOOKUP_URL, params)
 
-    response = requests.get(LOOKUP_URL, params=params, timeout=30)
+    response = requests.get(CDX_LOOKUP_URL, params=params, timeout=30)
     response.raise_for_status()
 
     print(json.dumps(response.json(), indent=2))
@@ -83,7 +83,7 @@ def fetch_cmd(args: argparse.Namespace) -> None:
     }
 
     logger.debug("Looking up %s", args.url)
-    response = requests.get(LOOKUP_URL, params=params, timeout=30)
+    response = requests.get(CDX_LOOKUP_URL, params=params, timeout=30)
     response.raise_for_status()
 
     results = response.json().get("results", [])
