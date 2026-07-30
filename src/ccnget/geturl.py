@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+from importlib.metadata import PackageNotFoundError, version
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
@@ -108,6 +109,14 @@ def fetch_cmd(args: argparse.Namespace) -> None:
     retrieve_record(first["warc_path"], first["offset"], first["length"], args.output)
 
 
+def get_version() -> str:
+    """Get version from pyproject.toml"""
+    try:
+        return version("ccnget")
+    except PackageNotFoundError:
+        return "unknown (local dev)"
+
+
 def get_parser() -> argparse.ArgumentParser:
     """Build and return the ArgumentParser for ccnget."""
     _loglevel_: str = "WARNING"
@@ -117,6 +126,7 @@ def get_parser() -> argparse.ArgumentParser:
         default=_loglevel_,
         help="".join(["CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is ", _loglevel_]),
     )
+    parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {get_version()}")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -144,8 +154,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> None:
     """Parse CLI arguments and dispatch to subcommands."""
-    parser = get_parser()
-    args = parser.parse_args(argv)
+    args = get_parser().parse_args(argv)
 
     # set debugging level
     numeric_level: Optional[int] = getattr(logging, args.loglevel.upper(), None)

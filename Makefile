@@ -55,6 +55,7 @@ man:
 		--function get_parser \
 		--prog ccnget \
 		--project-name ccnget \
+		--version "$$(uv version | awk '{print $$2}')" \
 		--include man/__envars.inc \
 		> man/ccnget.1
 

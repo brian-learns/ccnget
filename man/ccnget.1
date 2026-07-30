@@ -1,9 +1,9 @@
-.TH CCNGET "1" "2026\-07\-30" "ccnget" "Generated Python Manual"
+.TH CCNGET "1" "2026\-07\-30" "ccnget 0.1.0" "Generated Python Manual"
 .SH NAME
 ccnget
 .SH SYNOPSIS
 .B ccnget
-[-h] [--loglevel LOGLEVEL] {lookup,retrieve,fetch} ...
+[-h] [--loglevel LOGLEVEL] [-v] {lookup,retrieve,fetch} ...
 .SH DESCRIPTION
 get from CC\-NEWS
 
@@ -72,6 +72,10 @@ Output file path (default: stdout)
 .TP
 \fB\-\-loglevel\fR \fI\,LOGLEVEL\/\fR
 CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is WARNING
+
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+show program's version number and exit
 .SH ENVIRONMENT
 .TP
 .BI CDX_LOOKUP_URL
