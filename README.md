@@ -1,5 +1,18 @@
 # `ccnget` -- common crawl news get
 
+## Quickstart
+Running the command
+```bash
+uvx --from git+https://github.com/brian-learns/ccnget ccnget fetch http://example.com/ | uvx trafilatura
+```
+will lookup `http://example.com/` in an index; get the WARC file, offset, and size; get the archived web page from S3; then extract some text with [`trafilatura`](https://github.com/adbar/trafilatura) -- resulting in:
+```
+This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.
+More information...
+```
+
+## Background
+
 [Common Crawl Announced a News Dataset](https://commoncrawl.org/blog/news-dataset-available) October 4th, 2016, "containing news articles from news sites all over the world."  Between then end of June 2016 over 1.4 billion news articles have been archived in the set.
 
 This repository contains a python command for looking up and retrieving URLs from the [WARC files on S3](https://data.commoncrawl.org/crawl-data/CC-NEWS/index.html).
@@ -13,12 +26,6 @@ uv add git+https://github.com/brian-learns/ccnget
 ```
 
 ## Usage
-
-```bash
-❯ ccnget fetch http://example.com/ | uvx trafilatura
-This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.
-More information...
-```
 
 ### Lookup
 
