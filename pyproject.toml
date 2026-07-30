@@ -23,6 +23,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "argparse-manpage>=4.7",
     "bandit>=1.9.4",
     "interrogate>=1.7.0",
     "pytest>=9.1.1",
@@ -30,6 +31,11 @@ dev = [
     "ruff>=0.16.0",
     "ty>=0.0.63",
     "vulture>=2.16",
+]
+
+[tool.build_manpages]
+manpages = [
+    "man/ccnget.1:function=get_parser:module=ccnget.geturl",
 ]
 [tool.ruff]
 line-length = 120

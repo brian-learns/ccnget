@@ -1,0 +1,85 @@
+.TH CCNGET "1" "2026\-07\-30" "ccnget" "Generated Python Manual"
+.SH NAME
+ccnget
+.SH SYNOPSIS
+.B ccnget
+[-h] [--loglevel LOGLEVEL] {lookup,retrieve,fetch} ...
+.SH DESCRIPTION
+get from CC\-NEWS
+
+.SH
+POSITIONAL ARGUMENTS
+.TP
+\fBccnget\fR \fI\,lookup\/\fR
+Lookup URLs in CC\-NEWS index
+.TP
+\fBccnget\fR \fI\,retrieve\/\fR
+Retrieve WARC records from Common Crawl
+.TP
+\fBccnget\fR \fI\,fetch\/\fR
+Lookup and retrieve the first result
+
+.SH COMMAND \fI\,'ccnget lookup'\/\fR
+usage: ccnget lookup [\-h] [\-\-exact] [\-\-limit LIMIT] url
+
+.TP
+\fBurl\fR
+
+.SH OPTIONS \fI\,'ccnget lookup'\/\fR
+.TP
+\fB\-\-exact\fR
+
+.TP
+\fB\-\-limit\fR \fI\,LIMIT\/\fR
+Limit value (1\-1000, default: 100)
+
+.SH COMMAND \fI\,'ccnget retrieve'\/\fR
+usage: ccnget retrieve [\-h] \-\-warc\-path WARC_PATH \-\-offset OFFSET
+                       \-\-length LENGTH [\-\-output OUTPUT]
+
+.SH OPTIONS \fI\,'ccnget retrieve'\/\fR
+.TP
+\fB\-\-warc\-path\fR \fI\,WARC_PATH\/\fR
+WARC path from lookup results
+
+.TP
+\fB\-\-offset\fR \fI\,OFFSET\/\fR
+Byte offset in WARC file
+
+.TP
+\fB\-\-length\fR \fI\,LENGTH\/\fR
+Byte length of record
+
+.TP
+\fB\-\-output\fR \fI\,OUTPUT\/\fR, \fB\-o\fR \fI\,OUTPUT\/\fR
+Output file path (default: stdout)
+
+.SH COMMAND \fI\,'ccnget fetch'\/\fR
+usage: ccnget fetch [\-h] [\-\-exact] [\-\-output OUTPUT] url
+
+.TP
+\fBurl\fR
+
+.SH OPTIONS \fI\,'ccnget fetch'\/\fR
+.TP
+\fB\-\-exact\fR
+
+.TP
+\fB\-\-output\fR \fI\,OUTPUT\/\fR, \fB\-o\fR \fI\,OUTPUT\/\fR
+Output file path (default: stdout)
+
+.SH OPTIONS
+.TP
+\fB\-\-loglevel\fR \fI\,LOGLEVEL\/\fR
+CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is WARNING
+.SH ENVIRONMENT
+.TP
+.BI CDX_LOOKUP_URL
+The URL for the CDX server lookup. 
+Default: \fIhttps://brian-learns-cc-news-cdx-server.hf.space/lookup\fR
+.TP
+.BI CC_CRAWL_BASE_URL
+The base URL for downloading Common Crawl data. 
+Default: \fIhttps://data.commoncrawl.org\fR
+.PP
+These variables can be set directly in your shell environment or defined in a local \fI.env\fR file.

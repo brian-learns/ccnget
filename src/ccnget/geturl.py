@@ -108,8 +108,8 @@ def fetch_cmd(args: argparse.Namespace) -> None:
     retrieve_record(first["warc_path"], first["offset"], first["length"], args.output)
 
 
-def main(argv: Optional[list[str]] = None) -> None:
-    """Parse CLI arguments and dispatch to subcommands."""
+def get_parser() -> argparse.ArgumentParser:
+    """Build and return the ArgumentParser for ccnget."""
     _loglevel_: str = "WARNING"
     parser = argparse.ArgumentParser(description="get from CC-NEWS")
     parser.add_argument(
@@ -139,6 +139,12 @@ def main(argv: Optional[list[str]] = None) -> None:
     fetch_parser.add_argument("--exact", action="store_true")
     fetch_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
 
+    return parser
+
+
+def main(argv: Optional[list[str]] = None) -> None:
+    """Parse CLI arguments and dispatch to subcommands."""
+    parser = get_parser()
     args = parser.parse_args(argv)
 
     # set debugging level

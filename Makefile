@@ -1,6 +1,6 @@
 REQUIRED_EXECUTABLES = uv rm find
 
-.PHONY: help check test clean testpackages checkdeps
+.PHONY: help check test clean testpackages checkdeps man
 
 help:
 	@echo ""
@@ -8,6 +8,7 @@ help:
 	@echo "  make test       Run static checks followed immediately by pytest"
 	@echo "  make clean      Wipe out test tool cache tracking footprints"
 	@echo "  make init       Initialize new project with uv and test setup"
+	@echo "  make man        Create man page"
 
 check:
 	@echo "\n— [An extremely fast Python linter and code formatter](https://docs.astral.sh/ruff/)"
@@ -45,7 +46,17 @@ checkdeps:
 	@echo "All required commands are available."
 
 testpackages:
-	uv add --dev ruff bandit vulture refurb ty pytest interrogate
+	uv add --dev ruff bandit vulture refurb ty pytest interrogate argparse-manpage
+
+man:
+	mkdir -p man
+	uv run argparse-manpage \
+		--module ccnget.geturl \
+		--function get_parser \
+		--prog ccnget \
+		--project-name ccnget \
+		--include man/__envars.inc \
+		> man/ccnget.1
 
 export GIT_CEILING_DIRECTORIES	# can influence `uv init` behaviour
 pyproject.toml:
