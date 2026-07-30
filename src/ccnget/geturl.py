@@ -67,6 +67,7 @@ def retrieve_record(warc_path: str, offset: int, length: int, output: Optional[s
     response.raise_for_status()
 
     for record in ArchiveIterator(BytesIO(response.content)):
+        logger.debug(f"WARC Headers:\n{record.rec_headers}")
         if record.rec_type == "response":
             payload = record.content_stream().read()
             if output:
