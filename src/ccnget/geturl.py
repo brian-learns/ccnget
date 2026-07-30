@@ -120,7 +120,7 @@ def get_version() -> str:
 def get_parser() -> argparse.ArgumentParser:
     """Build and return the ArgumentParser for ccnget."""
     _loglevel_: str = "WARNING"
-    parser = argparse.ArgumentParser(description="get from CC-NEWS")
+    parser = argparse.ArgumentParser(description="lookup urls and get files from Common Crawl News")
     parser.add_argument(
         "--loglevel",
         default=_loglevel_,
