@@ -97,7 +97,10 @@ While most of this was vibe coded, I drew this architecture diagram in monodraw 
  └────────────────────────────────────────┘       
 ```
 
-Besides the code in this repository, the code to build cdxj and rocksdb indexes is in the [`brian-learns/cdx-cc-news` dataset Files tab](https://huggingface.co/datasets/brian-learns/cdx-cc-news/tree/main) and the code for the endpoint is in [`brian-learns/cc-news-cdx-server` hf spaces Files tab](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server/tree/main).
+## Supporting Code
+Besides the code in this repository, code needed to make this work is in 
+ * [`brian-learns/cdx-cc-news` dataset Files tab](https://huggingface.co/datasets/brian-learns/cdx-cc-news/tree/main) to build cdxj and rocksdb indexes
+ * [`brian-learns/cc-news-cdx-server` hf spaces Files tab](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server/tree/main) for the lookup endpoint
 
 ## License
 
