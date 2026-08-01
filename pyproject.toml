@@ -1,6 +1,6 @@
 [project]
 name = "ccnget"
-version = "0.1.0"
+version = "0.1.1"
 description = "lookup urls and get files from Common Crawl News"
 readme = "README.md"
 authors = [
@@ -18,7 +18,7 @@ ccnget = "ccnget.geturl:main"
 
 
 [build-system]
-requires = ["uv_build>=0.11.12,<0.12.0"]
+requires = ["uv_build>=0.11.32,<0.12.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
@@ -29,7 +29,7 @@ dev = [
     "pytest>=9.1.1",
     "refurb>=2.3.1",
     "ruff>=0.16.0",
-    "ty>=0.0.63",
+    "ty>=0.0.64",
     "vulture>=2.16",
 ]
 

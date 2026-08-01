@@ -39,6 +39,17 @@ def limited_int(val_str):
     return val
 
 
+def handle_lookup_404(response: requests.Response, url: str) -> None:
+    """Handle a 404 from the CDX lookup by printing a clean error and exiting."""
+    if response.status_code == 404:
+        print(
+            f"ccnget: no match for {url} in {CDX_LOOKUP_URL}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    response.raise_for_status()
+
+
 def lookup_cmd(args: argparse.Namespace) -> None:
     """Execute the lookup subcommand."""
     params = {
@@ -50,7 +61,7 @@ def lookup_cmd(args: argparse.Namespace) -> None:
     logger.debug("Requesting %s with params %s", CDX_LOOKUP_URL, params)
 
     response = requests.get(CDX_LOOKUP_URL, params=params, timeout=30)
-    response.raise_for_status()
+    handle_lookup_404(response, args.url)
 
     print(json.dumps(response.json(), indent=2))
 
@@ -96,7 +107,7 @@ def fetch_cmd(args: argparse.Namespace) -> None:
 
     logger.debug("Looking up %s", args.url)
     response = requests.get(CDX_LOOKUP_URL, params=params, timeout=30)
-    response.raise_for_status()
+    handle_lookup_404(response, args.url)
 
     results = response.json().get("results", [])
 
