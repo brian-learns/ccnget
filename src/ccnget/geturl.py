@@ -34,8 +34,8 @@ def limited_int(val_str):
         # Add 'from None' to satisfy Ruff B904 and hide the ValueError traceback
         raise argparse.ArgumentTypeError("Must be an integer") from None
 
-    if not (1 <= val <= 1000):
-        raise argparse.ArgumentTypeError("Value must be between 1 and 1000")
+    if not (1 <= val <= 100):
+        raise argparse.ArgumentTypeError("Value must be between 1 and 100")
     return val
 
 
@@ -145,7 +145,7 @@ def get_parser() -> argparse.ArgumentParser:
     lookup_parser = subparsers.add_parser("lookup", help="Lookup URLs in CC-NEWS index")
     lookup_parser.add_argument("url")
     lookup_parser.add_argument("--exact", action="store_true")
-    lookup_parser.add_argument("--limit", type=limited_int, default=100, help="Limit value (1-1000, default: 100)")
+    lookup_parser.add_argument("--limit", type=limited_int, default=10, help="Limit value (1-100, default: 10)")
 
     # retrieve subcommand
     retrieve_parser = subparsers.add_parser("retrieve", help="Retrieve WARC records from Common Crawl")

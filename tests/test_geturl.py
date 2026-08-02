@@ -29,20 +29,20 @@ def _make_warc_response(payload: bytes) -> bytes:
 
 class TestLimitedInt:
     def test_valid_value(self):
-        assert limited_int("500") == 500
+        assert limited_int("50") == 50
 
     def test_min_value(self):
         assert limited_int("1") == 1
 
     def test_max_value(self):
-        assert limited_int("1000") == 1000
+        assert limited_int("100") == 100
 
     def test_below_min_raises(self):
-        with pytest.raises(argparse.ArgumentTypeError, match="between 1 and 1000"):
+        with pytest.raises(argparse.ArgumentTypeError, match="between 1 and 100"):
             limited_int("0")
 
     def test_above_max_raises(self):
-        with pytest.raises(argparse.ArgumentTypeError, match="between 1 and 1000"):
+        with pytest.raises(argparse.ArgumentTypeError, match="between 1 and 100"):
             limited_int("1001")
 
     def test_non_integer_raises(self):
