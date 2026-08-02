@@ -1,5 +1,9 @@
 # `ccnget` -- common crawl news get
 
+Search over 1.4 Billion archived news URLs from CC-NEWS and retrieve contents from WARC files.
+
+`/lookup?` Endpoint OpenAPI: [🛠️ Try it out (swagger)](https://brian-learns-cc-news-cdx-server.hf.space/docs#/default/lookup_endpoint_lookup_get) | [📖 Redoc](https://brian-learns-cc-news-cdx-server.hf.space/redoc) | [📄 OpenAPI JSON](https://brian-learns-cc-news-cdx-server.hf.space/openapi.json) | [🤗 Hugging Face Space](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server)
+
 ## Quickstart
 Running the command
 ```bash
@@ -63,6 +67,16 @@ Lookup and retrieve the first result in one step:
 ```bash
 uv run ccnget fetch "http://example.com" -o article.html
 ```
+
+## Environment
+
+ * **`CDX_LOOKUP_URL`** The URL for the CDX server lookup.
+   * Default: *`https://brian-learns-cc-news-cdx-server.hf.space/lookup`*
+ * **`CC_CRAWL_BASE_URL`** The base URL for downloading Common Crawl data.
+   * Default: *`https://data.commoncrawl.org`*
+
+These variables can be set directly in your shell environment or defined
+in a local *.env* file.
 
 ## Diagram
 
