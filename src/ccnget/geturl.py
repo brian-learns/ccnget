@@ -56,6 +56,7 @@ def lookup_cmd(args: argparse.Namespace) -> None:
         "url": args.url,
         "exact": args.exact,
         "limit": args.limit,
+        "at": args.at,
     }
 
     logger.debug("Requesting %s with params %s", CDX_LOOKUP_URL, params)
@@ -102,6 +103,7 @@ def fetch_cmd(args: argparse.Namespace) -> None:
     params = {
         "url": args.url,
         "exact": args.exact,
+        "at": args.at,
         "limit": 1,
     }
 
@@ -145,6 +147,10 @@ def get_parser() -> argparse.ArgumentParser:
     lookup_parser = subparsers.add_parser("lookup", help="Lookup URLs in CC-NEWS index")
     lookup_parser.add_argument("url")
     lookup_parser.add_argument("--exact", action="store_true")
+    lookup_parser.add_argument(
+        "--at",
+        help="Timestamp (YYYYMMDDhhmmss). Seeks from timestamp if exact=True, finds closest match if exact=False.",
+    )
     lookup_parser.add_argument("--limit", type=limited_int, default=10, help="Limit value (1-100, default: 10)")
 
     # retrieve subcommand
@@ -158,6 +164,10 @@ def get_parser() -> argparse.ArgumentParser:
     fetch_parser = subparsers.add_parser("fetch", help="Lookup and retrieve the first result")
     fetch_parser.add_argument("url")
     fetch_parser.add_argument("--exact", action="store_true")
+    fetch_parser.add_argument(
+        "--at",
+        help="Timestamp (YYYYMMDDhhmmss). Seeks from timestamp if exact=True, finds closest match if exact=False.",
+    )
     fetch_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
 
     return parser
