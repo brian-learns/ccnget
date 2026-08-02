@@ -1,4 +1,4 @@
-.TH CCNGET "1" "2026\-08\-02" "ccnget 0.1.2.dev0" "Generated Python Manual"
+.TH CCNGET "1" "2026\-08\-02" "ccnget 0.1.2" "Generated Python Manual"
 .SH NAME
 ccnget
 .SH SYNOPSIS
@@ -20,7 +20,7 @@ Retrieve WARC records from Common Crawl
 Lookup and retrieve the first result
 
 .SH COMMAND \fI\,'ccnget lookup'\/\fR
-usage: ccnget lookup [\-h] [\-\-exact] [\-\-limit LIMIT] url
+usage: ccnget lookup [\-h] [\-\-exact] [\-\-at AT] [\-\-limit LIMIT] url
 
 .TP
 \fBurl\fR
@@ -28,6 +28,11 @@ usage: ccnget lookup [\-h] [\-\-exact] [\-\-limit LIMIT] url
 .SH OPTIONS \fI\,'ccnget lookup'\/\fR
 .TP
 \fB\-\-exact\fR
+
+.TP
+\fB\-\-at\fR \fI\,AT\/\fR
+Timestamp (YYYYMMDDhhmmss). Seeks from timestamp if exact=True, finds closest
+match if exact=False.
 
 .TP
 \fB\-\-limit\fR \fI\,LIMIT\/\fR
@@ -55,7 +60,7 @@ Byte length of record
 Output file path (default: stdout)
 
 .SH COMMAND \fI\,'ccnget fetch'\/\fR
-usage: ccnget fetch [\-h] [\-\-exact] [\-\-output OUTPUT] url
+usage: ccnget fetch [\-h] [\-\-exact] [\-\-at AT] [\-\-output OUTPUT] url
 
 .TP
 \fBurl\fR
@@ -63,6 +68,11 @@ usage: ccnget fetch [\-h] [\-\-exact] [\-\-output OUTPUT] url
 .SH OPTIONS \fI\,'ccnget fetch'\/\fR
 .TP
 \fB\-\-exact\fR
+
+.TP
+\fB\-\-at\fR \fI\,AT\/\fR
+Timestamp (YYYYMMDDhhmmss). Seeks from timestamp if exact=True, finds closest
+match if exact=False.
 
 .TP
 \fB\-\-output\fR \fI\,OUTPUT\/\fR, \fB\-o\fR \fI\,OUTPUT\/\fR

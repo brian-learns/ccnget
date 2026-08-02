@@ -97,7 +97,7 @@ class TestLookupCmd:
         mock_response.json.return_value = {"results": []}
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(url="http://example.com", exact=False, limit=10)
+        args = argparse.Namespace(url="http://example.com", exact=False, limit=10, at=None)
         lookup_cmd(args)
 
         mock_get.assert_called_once()
@@ -106,6 +106,7 @@ class TestLookupCmd:
         assert call_args[1]["params"]["url"] == "http://example.com"
         assert call_args[1]["params"]["exact"] is False
         assert call_args[1]["params"]["limit"] == 10
+        assert call_args[1]["params"]["at"] is None
 
     @patch("ccnget.geturl.requests.get")
     def test_lookup_exact_flag(self, mock_get):
@@ -113,11 +114,23 @@ class TestLookupCmd:
         mock_response.json.return_value = {"results": []}
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(url="http://example.com", exact=True, limit=5)
+        args = argparse.Namespace(url="http://example.com", exact=True, limit=5, at=None)
         lookup_cmd(args)
 
         call_args = mock_get.call_args
         assert call_args[1]["params"]["exact"] is True
+
+    @patch("ccnget.geturl.requests.get")
+    def test_lookup_at_parameter(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"results": []}
+        mock_get.return_value = mock_response
+
+        args = argparse.Namespace(url="http://example.com", exact=False, limit=10, at="20240101120000")
+        lookup_cmd(args)
+
+        call_args = mock_get.call_args
+        assert call_args[1]["params"]["at"] == "20240101120000"
 
 
 class TestRetrieveCmd:
@@ -198,12 +211,33 @@ class TestFetchCmd:
 
         mock_get.side_effect = [lookup_response, retrieve_response]
 
-        args = argparse.Namespace(url="http://example.com", exact=False, output=None)
+        args = argparse.Namespace(url="http://example.com", exact=False, output=None, at=None)
         fetch_cmd(args)
 
         captured = capsys.readouterr()
         assert b"<html>fetched</html>" in captured.out.encode()
         assert mock_get.call_count == 2
+
+    @patch("ccnget.geturl.requests.get")
+    def test_fetch_with_at_parameter(self, mock_get, capsys):
+        lookup_response = MagicMock()
+        lookup_response.json.return_value = {
+            "results": [
+                {"surt_key": "com,example)/", "timestamp": "20170101000000", "warc_path": "test.warc.gz", "offset": 100, "length": 50}
+            ]
+        }
+
+        warc_content = _make_warc_response(b"<html>fetched</html>")
+        retrieve_response = MagicMock()
+        retrieve_response.content = warc_content
+
+        mock_get.side_effect = [lookup_response, retrieve_response]
+
+        args = argparse.Namespace(url="http://example.com", exact=False, output=None, at="20240101120000")
+        fetch_cmd(args)
+
+        call_args = mock_get.call_args_list[0]
+        assert call_args[1]["params"]["at"] == "20240101120000"
 
     @patch("ccnget.geturl.requests.get")
     def test_fetch_with_output_file(self, mock_get, tmp_path):
@@ -221,7 +255,7 @@ class TestFetchCmd:
         mock_get.side_effect = [lookup_response, retrieve_response]
 
         output_file = tmp_path / "fetched.html"
-        args = argparse.Namespace(url="http://example.com", exact=True, output=str(output_file))
+        args = argparse.Namespace(url="http://example.com", exact=True, output=str(output_file), at=None)
         fetch_cmd(args)
 
         assert output_file.exists()
@@ -233,7 +267,7 @@ class TestFetchCmd:
         lookup_response.json.return_value = {"results": []}
         mock_get.return_value = lookup_response
 
-        args = argparse.Namespace(url="http://nonexistent.example", exact=False, output=None)
+        args = argparse.Namespace(url="http://nonexistent.example", exact=False, output=None, at=None)
         fetch_cmd(args)
 
         assert mock_get.call_count == 1
