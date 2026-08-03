@@ -4,10 +4,12 @@ Lookup and retrieve archived web pages from the Common Crawl News dataset.
 
 Example
 -------
+```
 >>> import ccnget
 >>> result = ccnget.fetch("http://example.com")
 >>> print(result.surt_key, result.timestamp)
 >>> tree = LexborHTMLParser(result.payload)
+```
 """
 
 from __future__ import annotations
