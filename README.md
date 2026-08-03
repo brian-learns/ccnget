@@ -116,6 +116,11 @@ Besides the code in this repository, code needed to make this work is in
  * [`brian-learns/cdx-cc-news` dataset Files tab](https://huggingface.co/datasets/brian-learns/cdx-cc-news/tree/main) to build cdxj and rocksdb indexes
  * [`brian-learns/cc-news-cdx-server` hf spaces Files tab](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server/tree/main) for the lookup endpoint
 
+## See Also
+ * [`samples`](./samples/) directory with example using `duckdb` to query the parquet files, and sort of random samples of the data
+ * [`man`](./man/) man page for the command line
+ * [`api.md`](./api.md) pydoc markdown for use as a python module
+
 ## License
 
 BSD 3-Clause for the code in this revision control repository.

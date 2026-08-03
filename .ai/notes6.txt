@@ -1,0 +1,9 @@
+source: src/ccnget/geturl.py
+run: uv run ccnget ...
+test: make test
+
+This command line is working well, but now I want to use it as a library.
+
+Please analyze how this might be refactored to better support use as a module with various html parsers such as https://github.com/rushter/selectolax
+
+as a caller of the API, I might like to get access to the response headers, or the WARC headers

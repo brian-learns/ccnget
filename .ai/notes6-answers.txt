@@ -1,0 +1,17 @@
+Answers:
+
+1. API surface: (lookup, retrieve_record) as clean public APIs that callers compose themselves
+
+2. What should the return type look like? Something like a dataclass FetchResult(payload, http_headers, warc_headers, surt_key, timestamp)
+
+3. HTML parser integration: 
+
+```python pseudocode
+import ccnget 
+from selectolax.lexbor import LexborHTMLParser
+resp = ccnget.fetch("http://example.com")
+html = resp.payload
+tree = LexborHTMLParser(html)
+```
+
+4. Backward compatibility: I like the CLI interface pretty well now, would prefer to keep it the same
