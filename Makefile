@@ -8,7 +8,7 @@ help:
 	@echo "  make test       Run static checks followed immediately by pytest"
 	@echo "  make clean      Wipe out test tool cache tracking footprints"
 	@echo "  make init       Initialize new project with uv and test setup"
-	@echo "  make man        Create man page"
+	@echo "  make mandoc     Create man page and pydoc markdown for api.md"
 
 check:
 	@echo "\n— [An extremely fast Python linter and code formatter](https://docs.astral.sh/ruff/)"
@@ -48,6 +48,8 @@ checkdeps:
 testpackages:
 	uv add --dev ruff bandit vulture refurb ty pytest interrogate argparse-manpage
 
+mandoc: man doc
+
 man:
 	mkdir -p man
 	uv run argparse-manpage \
@@ -58,6 +60,9 @@ man:
 		--version "$$(uv version | awk '{print $$2}')" \
 		--include man/__envars.inc \
 		> man/ccnget.1
+
+doc:
+	uvx pydoc-markdown
 
 export GIT_CEILING_DIRECTORIES	# can influence `uv init` behaviour
 pyproject.toml:
