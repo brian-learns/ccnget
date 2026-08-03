@@ -1,33 +1,27 @@
+"""CLI entry-point for ccnget.
+
+Uses the library API (ccnget.api) for all logic.
+"""
+
+from __future__ import annotations
+
 import argparse
 import json
 import logging
-import os
 import sys
 from importlib.metadata import PackageNotFoundError, version
-from io import BytesIO
-from pathlib import Path
 from typing import Optional
 
-import requests
-from dotenv import load_dotenv
-from warcio.archiveiterator import ArchiveIterator
-
-load_dotenv()
+from ccnget.api import CDX_LOOKUP_URL, NotFoundError
+from ccnget.api import fetch as api_fetch
+from ccnget.api import lookup as api_lookup
+from ccnget.api import retrieve as api_retrieve
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-CDX_LOOKUP_URL = os.environ.get(
-    "CDX_LOOKUP_URL",
-    "https://brian-learns-cc-news-cdx-server.hf.space/lookup",
-)
-CC_CRAWL_BASE_URL = os.environ.get(
-    "CC_CRAWL_BASE_URL",
-    "https://data.commoncrawl.org",
-)
 
-
-def limited_int(val_str):
-    """Checks that input is an integer between 1 and 1000."""
+def limited_int(val_str: str) -> int:
+    """Checks that input is an integer between 1 and 100."""
     try:
         val = int(val_str)
     except ValueError:
@@ -39,87 +33,79 @@ def limited_int(val_str):
     return val
 
 
-def handle_lookup_404(response: requests.Response, url: str) -> None:
-    """Handle a 404 from the CDX lookup by printing a clean error and exiting."""
-    if response.status_code == 404:
+def lookup_cmd(args: argparse.Namespace) -> None:
+    """Execute the lookup subcommand."""
+    try:
+        result = api_lookup(
+            args.url,
+            exact=args.exact,
+            limit=args.limit,
+            at=args.at,
+        )
+    except NotFoundError:
         print(
-            f"ccnget: no match for {url} in {CDX_LOOKUP_URL}",
+            f"ccnget: no match for {args.url} in {CDX_LOOKUP_URL}",
             file=sys.stderr,
         )
         sys.exit(1)
-    response.raise_for_status()
 
-
-def lookup_cmd(args: argparse.Namespace) -> None:
-    """Execute the lookup subcommand."""
-    params = {
-        "url": args.url,
-        "exact": args.exact,
-        "limit": args.limit,
-        "at": args.at,
+    # Build a JSON-serialisable dict matching the old format
+    output = {
+        "url": result.url,
+        "results": [
+            {
+                "surt_key": e.surt_key,
+                "timestamp": e.timestamp,
+                "warc_path": e.warc_path,
+                "offset": e.offset,
+                "length": e.length,
+                **e.extra,
+            }
+            for e in result.entries
+        ],
     }
-
-    logger.debug("Requesting %s with params %s", CDX_LOOKUP_URL, params)
-
-    response = requests.get(CDX_LOOKUP_URL, params=params, timeout=30)
-    handle_lookup_404(response, args.url)
-
-    print(json.dumps(response.json(), indent=2))
-
-
-def retrieve_record(warc_path: str, offset: int, length: int, output: Optional[str] = None) -> None:
-    """Retrieve a WARC record and write to stdout or file."""
-    warc_url = f"{CC_CRAWL_BASE_URL}/{warc_path}"
-    start = offset
-    end = start + length - 1
-
-    headers = {"Range": f"bytes={start}-{end}"}
-    logger.debug("Requesting %s Range: bytes=%d-%d", warc_url, start, end)
-
-    response = requests.get(warc_url, headers=headers, timeout=60)
-    response.raise_for_status()
-
-    for record in ArchiveIterator(BytesIO(response.content)):
-        logger.debug(f"WARC Headers:\n{record.rec_headers}")
-        if record.rec_type == "response":
-            payload = record.content_stream().read()
-            if output:
-                Path(output).write_bytes(payload)
-                logger.info("Wrote %d bytes to %s", len(payload), output)
-            else:
-                sys.stdout.buffer.write(payload)
-            return
-
-    logger.error("No response record found in WARC data")
+    print(json.dumps(output, indent=2))
 
 
 def retrieve_cmd(args: argparse.Namespace) -> None:
     """Execute the retrieve subcommand."""
-    retrieve_record(args.warc_path, args.offset, args.length, args.output)
+    result = api_retrieve(
+        args.warc_path,
+        args.offset,
+        args.length,
+    )
+
+    if args.output:
+        from pathlib import Path
+
+        Path(args.output).write_bytes(result.payload)
+        logger.info("Wrote %d bytes to %s", len(result.payload), args.output)
+    else:
+        sys.stdout.buffer.write(result.payload)
 
 
 def fetch_cmd(args: argparse.Namespace) -> None:
     """Execute the fetch subcommand: lookup then retrieve the first result."""
-    params = {
-        "url": args.url,
-        "exact": args.exact,
-        "at": args.at,
-        "limit": 1,
-    }
+    try:
+        result = api_fetch(
+            args.url,
+            exact=args.exact,
+            at=args.at,
+        )
+    except NotFoundError:
+        print(
+            f"ccnget: no match for {args.url} in {CDX_LOOKUP_URL}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    logger.debug("Looking up %s", args.url)
-    response = requests.get(CDX_LOOKUP_URL, params=params, timeout=30)
-    handle_lookup_404(response, args.url)
+    if args.output:
+        from pathlib import Path
 
-    results = response.json().get("results", [])
-
-    if not results:
-        logger.error("No results found for %s", args.url)
-        return
-
-    first = results[0]
-    logger.info("Found: %s at %s", first["surt_key"], first["timestamp"])
-    retrieve_record(first["warc_path"], first["offset"], first["length"], args.output)
+        Path(args.output).write_bytes(result.payload)
+        logger.info("Wrote %d bytes to %s", len(result.payload), args.output)
+    else:
+        sys.stdout.buffer.write(result.payload)
 
 
 def get_version() -> str:

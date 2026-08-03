@@ -1,13 +1,29 @@
 import argparse
-import json
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import pytest
-from warcio.archiveiterator import ArchiveIterator
 from warcio.warcwriter import WARCWriter
 
-from ccnget.geturl import fetch_cmd, lookup_cmd, limited_int, main, retrieve_cmd
+from ccnget.api import (
+    CcngetError,
+    FetchResult,
+    LookupEntry,
+    LookupResult,
+    NoRecordError,
+    NotFoundError,
+    _entry_from_dict,
+)
+from ccnget.api import (
+    fetch as api_fetch,
+)
+from ccnget.api import (
+    lookup as api_lookup,
+)
+from ccnget.api import (
+    retrieve as api_retrieve,
+)
+from ccnget.geturl import fetch_cmd, limited_int, lookup_cmd, main, retrieve_cmd
 
 
 def _make_warc_response(payload: bytes) -> bytes:
@@ -25,6 +41,9 @@ def _make_warc_response(payload: bytes) -> bytes:
     )
     writer.write_record(record)
     return buf.getvalue()
+
+
+# ── CLI helpers ────────────────────────────────────────────────────────────
 
 
 class TestLimitedInt:
@@ -50,8 +69,11 @@ class TestLimitedInt:
             limited_int("abc")
 
 
+# ── CLI parsing tests ─────────────────────────────────────────────────────
+
+
 class TestMainParsing:
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_lookup_subcommand(self, mock_get, capsys):
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
@@ -62,7 +84,7 @@ class TestMainParsing:
         captured = capsys.readouterr()
         assert '"results"' in captured.out
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_retrieve_subcommand(self, mock_get, capsys):
         warc_content = _make_warc_response(b"test")
         mock_response = MagicMock()
@@ -90,8 +112,11 @@ class TestMainParsing:
         assert exc_info.value.code != 0
 
 
+# ── CLI command tests ─────────────────────────────────────────────────────
+
+
 class TestLookupCmd:
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_lookup_calls_api(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
@@ -108,7 +133,7 @@ class TestLookupCmd:
         assert call_args[1]["params"]["limit"] == 10
         assert call_args[1]["params"]["at"] is None
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_lookup_exact_flag(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
@@ -120,7 +145,7 @@ class TestLookupCmd:
         call_args = mock_get.call_args
         assert call_args[1]["params"]["exact"] is True
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_lookup_at_parameter(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
@@ -132,9 +157,22 @@ class TestLookupCmd:
         call_args = mock_get.call_args
         assert call_args[1]["params"]["at"] == "20240101120000"
 
+    @patch("ccnget.api.requests.get")
+    def test_lookup_404_clean_exit(self, mock_get, capsys):
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+
+        args = argparse.Namespace(url="http://nonexistent.example", exact=False, limit=10, at=None)
+        with pytest.raises(SystemExit):
+            lookup_cmd(args)
+
+        captured = capsys.readouterr()
+        assert "no match for http://nonexistent.example" in captured.err
+
 
 class TestRetrieveCmd:
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_retrieve_writes_to_stdout(self, mock_get, capsys):
         warc_content = _make_warc_response(b"<html>test</html>")
 
@@ -153,7 +191,7 @@ class TestRetrieveCmd:
         captured = capsys.readouterr()
         assert b"<html>test</html>" in captured.out.encode()
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_retrieve_writes_to_file(self, mock_get, tmp_path):
         warc_content = _make_warc_response(b"<html>file test</html>")
 
@@ -173,7 +211,7 @@ class TestRetrieveCmd:
         assert output_file.exists()
         assert output_file.read_bytes() == b"<html>file test</html>"
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_retrieve_uses_range_header(self, mock_get):
         warc_content = _make_warc_response(b"test")
 
@@ -196,12 +234,18 @@ class TestRetrieveCmd:
 
 
 class TestFetchCmd:
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_fetch_retrieves_first_result(self, mock_get, capsys):
         lookup_response = MagicMock()
         lookup_response.json.return_value = {
             "results": [
-                {"surt_key": "com,example)/", "timestamp": "20170101000000", "warc_path": "test.warc.gz", "offset": 100, "length": 50}
+                {
+                    "surt_key": "com,example)/",
+                    "timestamp": "20170101000000",
+                    "warc_path": "test.warc.gz",
+                    "offset": 100,
+                    "length": 50,
+                }
             ]
         }
 
@@ -218,12 +262,18 @@ class TestFetchCmd:
         assert b"<html>fetched</html>" in captured.out.encode()
         assert mock_get.call_count == 2
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_fetch_with_at_parameter(self, mock_get, capsys):
         lookup_response = MagicMock()
         lookup_response.json.return_value = {
             "results": [
-                {"surt_key": "com,example)/", "timestamp": "20170101000000", "warc_path": "test.warc.gz", "offset": 100, "length": 50}
+                {
+                    "surt_key": "com,example)/",
+                    "timestamp": "20170101000000",
+                    "warc_path": "test.warc.gz",
+                    "offset": 100,
+                    "length": 50,
+                }
             ]
         }
 
@@ -239,12 +289,18 @@ class TestFetchCmd:
         call_args = mock_get.call_args_list[0]
         assert call_args[1]["params"]["at"] == "20240101120000"
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_fetch_with_output_file(self, mock_get, tmp_path):
         lookup_response = MagicMock()
         lookup_response.json.return_value = {
             "results": [
-                {"surt_key": "com,example)/", "timestamp": "20170101000000", "warc_path": "test.warc.gz", "offset": 200, "length": 75}
+                {
+                    "surt_key": "com,example)/",
+                    "timestamp": "20170101000000",
+                    "warc_path": "test.warc.gz",
+                    "offset": 200,
+                    "length": 75,
+                }
             ]
         }
 
@@ -261,13 +317,166 @@ class TestFetchCmd:
         assert output_file.exists()
         assert output_file.read_bytes() == b"<html>file output</html>"
 
-    @patch("ccnget.geturl.requests.get")
+    @patch("ccnget.api.requests.get")
     def test_fetch_no_results(self, mock_get, capsys):
         lookup_response = MagicMock()
         lookup_response.json.return_value = {"results": []}
         mock_get.return_value = lookup_response
 
         args = argparse.Namespace(url="http://nonexistent.example", exact=False, output=None, at=None)
-        fetch_cmd(args)
+        with pytest.raises(SystemExit):
+            fetch_cmd(args)
 
         assert mock_get.call_count == 1
+        captured = capsys.readouterr()
+        assert "no match for http://nonexistent.example" in captured.err
+
+
+# ── Library API tests ─────────────────────────────────────────────────────
+
+
+class TestEntryFromDict:
+    def test_basic_entry(self):
+        d = {
+            "surt_key": "com,example)/",
+            "timestamp": "20170101000000",
+            "warc_path": "crawl-data/test.warc.gz",
+            "offset": 100,
+            "length": 500,
+        }
+        entry = _entry_from_dict(d)
+        assert entry.surt_key == "com,example)/"
+        assert entry.timestamp == "20170101000000"
+        assert entry.warc_path == "crawl-data/test.warc.gz"
+        assert entry.offset == 100
+        assert entry.length == 500
+        assert entry.extra == {}
+
+    def test_extra_fields(self):
+        d = {
+            "surt_key": "com,example)/",
+            "timestamp": "20170101000000",
+            "warc_path": "test.warc.gz",
+            "offset": 0,
+            "length": 100,
+            "original_url": "http://example.com",
+            "mime_type": "text/html",
+        }
+        entry = _entry_from_dict(d)
+        assert entry.extra["original_url"] == "http://example.com"
+        assert entry.extra["mime_type"] == "text/html"
+
+
+class TestLookup:
+    @patch("ccnget.api.requests.get")
+    def test_lookup_returns_result(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "results": [
+                {
+                    "surt_key": "com,example)/",
+                    "timestamp": "20170101000000",
+                    "warc_path": "test.warc.gz",
+                    "offset": 100,
+                    "length": 50,
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        result = api_lookup("http://example.com")
+        assert isinstance(result, LookupResult)
+        assert result.url == "http://example.com"
+        assert len(result.entries) == 1
+        assert isinstance(result.entries[0], LookupEntry)
+        assert result.entries[0].surt_key == "com,example)/"
+
+    @patch("ccnget.api.requests.get")
+    def test_lookup_404_raises(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+
+        with pytest.raises(NotFoundError, match="No match for"):
+            api_lookup("http://nonexistent.example")
+
+    @patch("ccnget.api.requests.get")
+    def test_lookup_custom_cdx_url(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"results": []}
+        mock_get.return_value = mock_response
+
+        api_lookup("http://example.com", cdx_url="http://custom-cdx/lookup")
+        assert mock_get.call_args[0][0] == "http://custom-cdx/lookup"
+
+
+class TestRetrieve:
+    @patch("ccnget.api.requests.get")
+    def test_retrieve_returns_fetch_result(self, mock_get):
+        warc_content = _make_warc_response(b"<html>test</html>")
+        mock_response = MagicMock()
+        mock_response.content = warc_content
+        mock_get.return_value = mock_response
+
+        result = api_retrieve("test.warc.gz", 0, 100)
+        assert isinstance(result, FetchResult)
+        assert result.payload == b"<html>test</html>"
+        assert result.warc_path == "test.warc.gz"
+        assert isinstance(result.http_headers, dict)
+        assert isinstance(result.warc_headers, dict)
+
+    @patch("ccnget.api.requests.get")
+    def test_retrieve_custom_base_url(self, mock_get):
+        warc_content = _make_warc_response(b"test")
+        mock_response = MagicMock()
+        mock_response.content = warc_content
+        mock_get.return_value = mock_response
+
+        api_retrieve("test.warc.gz", 0, 100, base_url="http://custom-crawl")
+        assert mock_get.call_args[0][0] == "http://custom-crawl/test.warc.gz"
+
+
+class TestFetch:
+    @patch("ccnget.api.requests.get")
+    def test_fetch_returns_fetch_result(self, mock_get):
+        lookup_response = MagicMock()
+        lookup_response.json.return_value = {
+            "results": [
+                {
+                    "surt_key": "com,example)/",
+                    "timestamp": "20170101000000",
+                    "warc_path": "test.warc.gz",
+                    "offset": 100,
+                    "length": 50,
+                }
+            ]
+        }
+
+        warc_content = _make_warc_response(b"<html>fetched</html>")
+        retrieve_response = MagicMock()
+        retrieve_response.content = warc_content
+
+        mock_get.side_effect = [lookup_response, retrieve_response]
+
+        result = api_fetch("http://example.com")
+        assert isinstance(result, FetchResult)
+        assert result.payload == b"<html>fetched</html>"
+        assert result.surt_key
+        assert result.timestamp
+        assert mock_get.call_count == 2
+
+    @patch("ccnget.api.requests.get")
+    def test_fetch_no_results_raises(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"results": []}
+        mock_get.return_value = mock_response
+
+        with pytest.raises(NotFoundError, match="No archived results"):
+            api_fetch("http://nonexistent.example")
+
+
+class TestExceptions:
+    def test_hierarchy(self):
+        assert issubclass(NotFoundError, CcngetError)
+        assert issubclass(NoRecordError, CcngetError)
+        assert issubclass(CcngetError, Exception)
