@@ -2,7 +2,7 @@
 
 Search over 1.4 Billion archived news URLs from CC-NEWS and retrieve contents from WARC files.
 
-`/lookup?` Endpoint OpenAPI: [🛠️ Try it out (swagger)](https://brian-learns-cc-news-cdx-server.hf.space/docs#/default/lookup_endpoint_lookup_get) | [📖 Redoc](https://brian-learns-cc-news-cdx-server.hf.space/redoc) | [📄 OpenAPI JSON](https://brian-learns-cc-news-cdx-server.hf.space/openapi.json) | [🤗 Hugging Face Space](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server)
+`/lookup?` Endpoint OpenAPI: [🛠️ Try it out (swagger)](https://brian-learns-cc-news-cdx-server.hf.space/docs#/default/lookup_endpoint_lookup_get) | [📖 Redoc](https://brian-learns-cc-news-cdx-server.hf.space/redoc) | [📄 OpenAPI JSON](https://brian-learns-cc-news-cdx-server.hf.space/openapi.json) | [🤗 Hugging Face Space](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server) | [🐳 docker compose](https://github.com/brian-learns/cdx_rocks) 
 
 ## Quickstart
 Running the command
