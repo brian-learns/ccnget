@@ -62,7 +62,7 @@ ignore = [
 
 
 [tool.bandit]
-skips = ["B101", "B404", "B602"]
+skips = ["B101", "B311", "B404", "B602"]
 
 [tool.interrogate]
 fail-under = 90

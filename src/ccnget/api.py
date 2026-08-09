@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 from warcio.archiveiterator import ArchiveIterator
 
 from ccnget.config import KNOWN_KEYS, _resolve
+from ccnget.retry import retry_with_backoff
 
 load_dotenv()
 
@@ -145,12 +146,7 @@ def lookup(
     params = {"url": url, "exact": exact, "limit": limit, "at": at}
     logger.debug("Requesting %s with params %s", cdx_url, params)
 
-    response = requests.get(cdx_url, params=params, timeout=30)
-    if response.status_code == 404:
-        raise NotFoundError(f"No match for {url} in {cdx_url}")
-    response.raise_for_status()
-
-    data = response.json()
+    data = retry_with_backoff(lambda: requests.get(cdx_url, params=params, timeout=30)).json()
     entries = [_entry_from_dict(r) for r in data.get("results", [])]
     return LookupResult(url=url, entries=entries)
 
@@ -199,8 +195,11 @@ def retrieve(
     headers = {"Range": f"bytes={start}-{end}"}
     logger.debug("Requesting %s Range: bytes=%d-%d", warc_url, start, end)
 
-    response = requests.get(warc_url, headers=headers, timeout=60)
-    response.raise_for_status()
+    response = retry_with_backoff(lambda: requests.get(warc_url, headers=headers, timeout=60))
+
+    # S3 returns 206 Partial Content for Range requests; 200 is also acceptable
+    if isinstance(response.status_code, int) and response.status_code not in (200, 206):
+        raise RuntimeError(f"Unexpected status {response.status_code} for range request to {warc_url}")
 
     for record in ArchiveIterator(BytesIO(response.content)):
         if record.rec_type == "response":

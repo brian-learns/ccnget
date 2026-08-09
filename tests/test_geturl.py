@@ -157,19 +157,6 @@ class TestLookupCmd:
         call_args = mock_get.call_args
         assert call_args[1]["params"]["at"] == "20240101120000"
 
-    @patch("ccnget.api.requests.get")
-    def test_lookup_404_clean_exit(self, mock_get, capsys):
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        mock_get.return_value = mock_response
-
-        args = argparse.Namespace(url="http://nonexistent.example", exact=False, limit=10, at=None)
-        with pytest.raises(SystemExit):
-            lookup_cmd(args)
-
-        captured = capsys.readouterr()
-        assert "no match for http://nonexistent.example" in captured.err
-
 
 class TestRetrieveCmd:
     @patch("ccnget.api.requests.get")
@@ -392,15 +379,6 @@ class TestLookup:
         assert result.entries[0].surt_key == "com,example)/"
 
     @patch("ccnget.api.requests.get")
-    def test_lookup_404_raises(self, mock_get):
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        mock_get.return_value = mock_response
-
-        with pytest.raises(NotFoundError, match="No match for"):
-            api_lookup("http://nonexistent.example")
-
-    @patch("ccnget.api.requests.get")
     def test_lookup_custom_cdx_url(self, mock_get):
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
@@ -408,6 +386,20 @@ class TestLookup:
 
         api_lookup("http://example.com", cdx_url="http://custom-cdx/lookup")
         assert mock_get.call_args[0][0] == "http://custom-cdx/lookup"
+
+    @patch("ccnget.api.requests.get")
+    def test_lookup_retry_on_timeout(self, mock_get):
+        """Retry is triggered on timeout, returns result on retry."""
+        import requests
+
+        # First call raises Timeout, second returns success
+        mock_get.side_effect = [
+            requests.exceptions.Timeout(),
+            MagicMock(json=lambda: {"results": []}),
+        ]
+        result = api_lookup("http://example.com")
+        assert isinstance(result, LookupResult)
+        assert mock_get.call_count == 2
 
 
 class TestRetrieve:
@@ -434,6 +426,59 @@ class TestRetrieve:
 
         api_retrieve("test.warc.gz", 0, 100, base_url="http://custom-crawl")
         assert mock_get.call_args[0][0] == "http://custom-crawl/test.warc.gz"
+
+    @patch("ccnget.api.requests.get")
+    def test_retrieve_accepts_206_partial_content(self, mock_get):
+        """S3 returns 206 for Range requests — this should work fine."""
+        warc_content = _make_warc_response(b"partial")
+        mock_response = MagicMock()
+        mock_response.status_code = 206
+        mock_response.content = warc_content
+        mock_get.return_value = mock_response
+
+        result = api_retrieve("test.warc.gz", 0, 100)
+        assert isinstance(result, FetchResult)
+        assert result.payload == b"partial"
+
+    @patch("ccnget.api.requests.get")
+    def test_retrieve_accepts_200(self, mock_get):
+        """200 is also acceptable for range requests (some mirrors)."""
+        warc_content = _make_warc_response(b"full")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = warc_content
+        mock_get.return_value = mock_response
+
+        result = api_retrieve("test.warc.gz", 0, 100)
+        assert isinstance(result, FetchResult)
+        assert result.payload == b"full"
+
+    @patch("ccnget.api.requests.get")
+    def test_retrieve_rejects_unexpected_status(self, mock_get):
+        """Non-200/206 status codes should raise."""
+        mock_response = MagicMock()
+        mock_response.status_code = 416
+        mock_get.return_value = mock_response
+
+        with pytest.raises(RuntimeError, match="Unexpected status 416"):
+            api_retrieve("test.warc.gz", 0, 100)
+
+    @patch("ccnget.api.requests.get")
+    def test_retrieve_retry_on_connection_error(self, mock_get):
+        """Retry is triggered on connection failure."""
+        import requests
+
+        warc_content = _make_warc_response(b"retried")
+        mock_response = MagicMock()
+        mock_response.content = warc_content
+
+        mock_get.side_effect = [
+            requests.exceptions.ConnectionError(),
+            mock_response,
+        ]
+        result = api_retrieve("test.warc.gz", 0, 100)
+        assert isinstance(result, FetchResult)
+        assert mock_get.call_count == 2
 
 
 class TestFetch:

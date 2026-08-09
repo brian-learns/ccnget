@@ -12,6 +12,8 @@ import sys
 from importlib.metadata import PackageNotFoundError, version
 from typing import Optional
 
+import requests as _requests
+
 from ccnget.api import NotFoundError
 from ccnget.api import fetch as api_fetch
 from ccnget.api import lookup as api_lookup
@@ -54,6 +56,9 @@ def lookup_cmd(args: argparse.Namespace) -> None:
             f"ccnget: no match for {args.url}",
             file=sys.stderr,
         )
+        sys.exit(1)
+    except _requests.exceptions.RequestException as exc:
+        print(f"ccnget: {exc}", file=sys.stderr)
         sys.exit(1)
 
     # Build a JSON-serialisable dict matching the old format
@@ -104,6 +109,9 @@ def fetch_cmd(args: argparse.Namespace) -> None:
             f"ccnget: no match for {args.url}",
             file=sys.stderr,
         )
+        sys.exit(1)
+    except _requests.exceptions.RequestException as exc:
+        print(f"ccnget: {exc}", file=sys.stderr)
         sys.exit(1)
 
     if args.output:
