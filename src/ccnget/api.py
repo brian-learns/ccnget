@@ -20,13 +20,10 @@ from io import BytesIO
 from typing import Any
 
 import requests
-from dotenv import load_dotenv
 from warcio.archiveiterator import ArchiveIterator
 
 from ccnget.config import KNOWN_KEYS, _resolve
 from ccnget.retry import retry_with_backoff
-
-load_dotenv()
 
 logger: logging.Logger = logging.getLogger(__name__)
 

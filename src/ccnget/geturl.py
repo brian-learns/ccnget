@@ -13,6 +13,7 @@ from importlib.metadata import PackageNotFoundError, version
 from typing import Optional
 
 import requests as _requests
+from dotenv import load_dotenv
 
 from ccnget.api import NotFoundError
 from ccnget.api import fetch as api_fetch
@@ -27,6 +28,9 @@ from ccnget.config import (
 )
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+# Default log level -- override with --loglevel flag
+DEFAULT_LOGLEVEL: str = "WARNING"
 
 
 def limited_int(val_str: str) -> int:
@@ -167,12 +171,11 @@ def get_version() -> str:
 
 def get_parser() -> argparse.ArgumentParser:
     """Build and return the ArgumentParser for ccnget."""
-    _loglevel_: str = "WARNING"
     parser = argparse.ArgumentParser(description="lookup urls and get files from Common Crawl News")
     parser.add_argument(
         "--loglevel",
-        default=_loglevel_,
-        help="".join(["CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is ", _loglevel_]),
+        default=DEFAULT_LOGLEVEL,
+        help="CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is " + DEFAULT_LOGLEVEL,
     )
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {get_version()}")
 
@@ -227,6 +230,8 @@ def get_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> None:
     """Parse CLI arguments and dispatch to subcommands."""
+    load_dotenv()
+
     args = get_parser().parse_args(argv)
 
     # set debugging level
@@ -250,34 +255,3 @@ def main(argv: Optional[list[str]] = None) -> None:
 # main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
     sys.exit(main())
-
-
-"""
-Copyright © 2026, brian-learns and contributors
-Copyright © 2015, Regents of the University of California
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-- Redistributions of source code must retain the above copyright notice,
-  this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-- Neither the name of the University of California nor the names of its
-  contributors may be used to endorse or promote products derived from this
-  software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-"""
