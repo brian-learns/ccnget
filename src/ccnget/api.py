@@ -15,7 +15,6 @@ Example
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Any
@@ -24,18 +23,15 @@ import requests
 from dotenv import load_dotenv
 from warcio.archiveiterator import ArchiveIterator
 
+from ccnget.config import KNOWN_KEYS, _resolve
+
 load_dotenv()
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-CDX_LOOKUP_URL: str = os.environ.get(
-    "CDX_LOOKUP_URL",
-    "https://brian-learns-cc-news-cdx-server.hf.space/lookup",
-)
-CC_CRAWL_BASE_URL: str = os.environ.get(
-    "CC_CRAWL_BASE_URL",
-    "https://data.commoncrawl.org",
-)
+# Hard-coded defaults (overridden by config file or env vars at runtime)
+CDX_LOOKUP_URL: str = KNOWN_KEYS["cdx-url"][0]
+CC_CRAWL_BASE_URL: str = KNOWN_KEYS["cc-crawl-base-url"][0]
 
 
 # ── Data classes ──────────────────────────────────────────────────────────
@@ -118,7 +114,7 @@ def lookup(
     exact: bool = False,
     limit: int = 10,
     at: str | None = None,
-    cdx_url: str = CDX_LOOKUP_URL,
+    cdx_url: str | None = None,
 ) -> LookupResult:
     """Search the CC-NEWS CDX index for *url*.
 
@@ -132,13 +128,20 @@ def lookup(
         Maximum number of results (1-100).
     at : str | None
         Timestamp filter (YYYYMMDDhhmmss).
-    cdx_url : str
-        Override the CDX lookup endpoint.
+    cdx_url : str | None
+        Override the CDX lookup endpoint. Falls back to config file,
+        then environment variable ``CDX_LOOKUP_URL``, then hard-coded default.
 
     Returns
     -------
     LookupResult
     """
+    if cdx_url is None:
+        cdx_url = _resolve(
+            "cdx-url",
+            default=CDX_LOOKUP_URL,
+            env_var="CDX_LOOKUP_URL",
+        )
     params = {"url": url, "exact": exact, "limit": limit, "at": at}
     logger.debug("Requesting %s with params %s", cdx_url, params)
 
@@ -157,7 +160,7 @@ def retrieve(
     offset: int,
     length: int,
     *,
-    base_url: str = CC_CRAWL_BASE_URL,
+    base_url: str | None = None,
     surt_key: str = "",
     timestamp: str = "",
 ) -> FetchResult:
@@ -171,8 +174,9 @@ def retrieve(
         Byte offset of the record.
     length : int
         Byte length of the record.
-    base_url : str
-        Override the Common Crawl base URL.
+    base_url : str | None
+        Override the Common Crawl base URL. Falls back to config file,
+        then environment variable ``CC_CRAWL_BASE_URL``, then hard-coded default.
     surt_key : str
         SURT key from the CDX index (populated by ``fetch()``).
     timestamp : str
@@ -182,6 +186,12 @@ def retrieve(
     -------
     FetchResult
     """
+    if base_url is None:
+        base_url = _resolve(
+            "cc-crawl-base-url",
+            default=CC_CRAWL_BASE_URL,
+            env_var="CC_CRAWL_BASE_URL",
+        )
     warc_url = f"{base_url}/{warc_path}"
     start = offset
     end = start + length - 1
@@ -213,8 +223,8 @@ def fetch(
     *,
     exact: bool = False,
     at: str | None = None,
-    cdx_url: str = CDX_LOOKUP_URL,
-    base_url: str = CC_CRAWL_BASE_URL,
+    cdx_url: str | None = None,
+    base_url: str | None = None,
 ) -> FetchResult:
     """Lookup *url* in the CDX index and retrieve the first archived result.
 
@@ -228,10 +238,12 @@ def fetch(
         Require exact match.
     at : str | None
         Timestamp filter (YYYYMMDDhhmmss).
-    cdx_url : str
-        Override the CDX lookup endpoint.
-    base_url : str
-        Override the Common Crawl base URL.
+    cdx_url : str | None
+        Override the CDX lookup endpoint. Falls back to config file,
+        then environment variable ``CDX_LOOKUP_URL``, then hard-coded default.
+    base_url : str | None
+        Override the Common Crawl base URL. Falls back to config file,
+        then environment variable ``CC_CRAWL_BASE_URL``, then hard-coded default.
 
     Returns
     -------

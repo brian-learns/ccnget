@@ -31,6 +31,24 @@ uv add git+https://github.com/brian-learns/ccnget
 
 ## Usage
 
+### Config
+
+Set a persistent lookup endpoint (stored in user config directory):
+
+```bash
+uv run ccnget config set cdx-url http://localhost:8000/lookup
+uv run ccnget config show
+uv run ccnget config get cdx-url
+uv run ccnget config unset cdx-url
+```
+
+Settings are resolved in this order (highest priority first):
+
+1. **CLI argument** (e.g. `lookup --cdx-url http://...`)
+2. **Config file** (set via `ccnget config set`)
+3. **Environment variable** (`CDX_LOOKUP_URL`, `CC_CRAWL_BASE_URL`)
+4. **Hard-coded default**
+
 ### Lookup
 
 Search a [CC-NEWS index](https://huggingface.co/datasets/brian-learns/cdx-cc-news) for a URL:
