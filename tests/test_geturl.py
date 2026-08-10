@@ -116,11 +116,13 @@ class TestMainParsing:
 
 
 class TestLookupCmd:
+    @patch("ccnget.api._resolve")
     @patch("ccnget.api.requests.get")
-    def test_lookup_calls_api(self, mock_get):
+    def test_lookup_calls_api(self, mock_get, mock_resolve):
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
         mock_get.return_value = mock_response
+        mock_resolve.return_value = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
 
         args = argparse.Namespace(url="http://example.com", exact=False, limit=10, at=None)
         lookup_cmd(args)
