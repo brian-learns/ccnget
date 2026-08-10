@@ -12,12 +12,25 @@ import sys
 from importlib.metadata import PackageNotFoundError, version
 from typing import Optional
 
-from ccnget.api import CDX_LOOKUP_URL, NotFoundError
+import requests as _requests
+from dotenv import load_dotenv
+
+from ccnget.api import NotFoundError
 from ccnget.api import fetch as api_fetch
 from ccnget.api import lookup as api_lookup
 from ccnget.api import retrieve as api_retrieve
+from ccnget.config import (
+    get_config,
+    list_config,
+    set_config,
+    show_config_path,
+    unset_config,
+)
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+# Default log level -- override with --loglevel flag
+DEFAULT_LOGLEVEL: str = "WARNING"
 
 
 def limited_int(val_str: str) -> int:
@@ -44,9 +57,12 @@ def lookup_cmd(args: argparse.Namespace) -> None:
         )
     except NotFoundError:
         print(
-            f"ccnget: no match for {args.url} in {CDX_LOOKUP_URL}",
+            f"ccnget: no match for {args.url}",
             file=sys.stderr,
         )
+        sys.exit(1)
+    except _requests.exceptions.RequestException as exc:
+        print(f"ccnget: {exc}", file=sys.stderr)
         sys.exit(1)
 
     # Build a JSON-serialisable dict matching the old format
@@ -94,9 +110,12 @@ def fetch_cmd(args: argparse.Namespace) -> None:
         )
     except NotFoundError:
         print(
-            f"ccnget: no match for {args.url} in {CDX_LOOKUP_URL}",
+            f"ccnget: no match for {args.url}",
             file=sys.stderr,
         )
+        sys.exit(1)
+    except _requests.exceptions.RequestException as exc:
+        print(f"ccnget: {exc}", file=sys.stderr)
         sys.exit(1)
 
     if args.output:
@@ -106,6 +125,40 @@ def fetch_cmd(args: argparse.Namespace) -> None:
         logger.info("Wrote %d bytes to %s", len(result.payload), args.output)
     else:
         sys.stdout.buffer.write(result.payload)
+
+
+def config_cmd(args: argparse.Namespace) -> None:
+    """Execute the config subcommand (set/get/show/unset)."""
+    if args.config_action == "set":
+        try:
+            set_config(args.key, args.value)
+        except KeyError as e:
+            print(f"ccnget: {e}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Set {args.key} = {args.value}")
+
+    elif args.config_action == "get":
+        val = get_config(args.key)
+        if val is None:
+            print(f"ccnget: {args.key} is not set in config file", file=sys.stderr)
+            sys.exit(1)
+        print(val)
+
+    elif args.config_action == "show":
+        cfg = list_config()
+        print(f"Config file: {show_config_path()}")
+        print()
+        for key, info in cfg.items():
+            print(f"  {key} = {info['value']}")
+            print(f"    source: {info['source']}")
+
+    elif args.config_action == "unset":
+        try:
+            unset_config(args.key)
+        except KeyError as e:
+            print(f"ccnget: {e}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Unset {args.key}")
 
 
 def get_version() -> str:
@@ -118,12 +171,11 @@ def get_version() -> str:
 
 def get_parser() -> argparse.ArgumentParser:
     """Build and return the ArgumentParser for ccnget."""
-    _loglevel_: str = "WARNING"
     parser = argparse.ArgumentParser(description="lookup urls and get files from Common Crawl News")
     parser.add_argument(
         "--loglevel",
-        default=_loglevel_,
-        help="".join(["CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is ", _loglevel_]),
+        default=DEFAULT_LOGLEVEL,
+        help="CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is " + DEFAULT_LOGLEVEL,
     )
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {get_version()}")
 
@@ -156,11 +208,30 @@ def get_parser() -> argparse.ArgumentParser:
     )
     fetch_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
 
+    # config subcommand (set/get/show/unset persistent settings)
+    config_sub = subparsers.add_parser("config", help="Manage persistent settings").add_subparsers(
+        dest="config_action", required=True
+    )
+
+    set_p = config_sub.add_parser("set", help="Set a config value")
+    set_p.add_argument("key", choices=["cdx-url", "cc-crawl-base-url"])
+    set_p.add_argument("value")
+
+    get_p = config_sub.add_parser("get", help="Get a config value")
+    get_p.add_argument("key", choices=["cdx-url", "cc-crawl-base-url"])
+
+    config_sub.add_parser("show", help="Show all config values and sources")
+
+    unset_p = config_sub.add_parser("unset", help="Remove a config value")
+    unset_p.add_argument("key", choices=["cdx-url", "cc-crawl-base-url"])
+
     return parser
 
 
 def main(argv: Optional[list[str]] = None) -> None:
     """Parse CLI arguments and dispatch to subcommands."""
+    load_dotenv()
+
     args = get_parser().parse_args(argv)
 
     # set debugging level
@@ -177,39 +248,10 @@ def main(argv: Optional[list[str]] = None) -> None:
         retrieve_cmd(args)
     elif args.command == "fetch":
         fetch_cmd(args)
+    elif args.command == "config":
+        config_cmd(args)
 
 
 # main() idiom for importing into REPL for debugging
 if __name__ == "__main__":
     sys.exit(main())
-
-
-"""
-Copyright © 2026, brian-learns and contributors
-Copyright © 2015, Regents of the University of California
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-- Redistributions of source code must retain the above copyright notice,
-  this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-- Neither the name of the University of California nor the names of its
-  contributors may be used to endorse or promote products derived from this
-  software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-"""
