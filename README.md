@@ -31,6 +31,11 @@ uv add git+https://github.com/brian-learns/ccnget
 
 ## Usage
 
+see also:
+```
+uv run ccnget --help
+```
+
 ### Config
 
 Set a persistent lookup endpoint (stored in user config directory):
@@ -144,4 +149,3 @@ Besides the code in this repository, code needed to make this work is in
 BSD 3-Clause for the code in this revision control repository.
 
 Files retrieved from Common Crawl are subject to [Common Crawl Terms of Use](https://commoncrawl.org/terms-of-use) and the original publisher's copyright.
-
