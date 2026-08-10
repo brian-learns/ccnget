@@ -16,6 +16,7 @@ import requests as _requests
 from dotenv import load_dotenv
 
 from ccnget.api import NotFoundError
+from ccnget.api import extent as api_extent
 from ccnget.api import fetch as api_fetch
 from ccnget.api import lookup as api_lookup
 from ccnget.api import retrieve as api_retrieve
@@ -225,7 +226,16 @@ def get_parser() -> argparse.ArgumentParser:
     unset_p = config_sub.add_parser("unset", help="Remove a config value")
     unset_p.add_argument("key", choices=["cdx-url", "cc-crawl-base-url"])
 
+    # extent subcommand (show index statistics)
+    subparsers.add_parser("extent", help="Show what content is indexed on the server")
+
     return parser
+
+
+def extent_cmd(args: argparse.Namespace) -> None:
+    """Execute the extent subcommand."""
+    result = api_extent()
+    print(json.dumps(result.__dict__, indent=2))
 
 
 def main(argv: Optional[list[str]] = None) -> None:
@@ -250,6 +260,8 @@ def main(argv: Optional[list[str]] = None) -> None:
         fetch_cmd(args)
     elif args.command == "config":
         config_cmd(args)
+    elif args.command == "extent":
+        extent_cmd(args)
 
 
 # main() idiom for importing into REPL for debugging

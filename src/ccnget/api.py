@@ -84,6 +84,25 @@ class FetchResult:
     warc_path: str
 
 
+@dataclass
+class ExtentResult:
+    """Result of querying the extent endpoint.
+
+    Attributes
+    ----------
+    file_extent : int
+        Number of files covered by this index.
+    file_oldest : str
+        First WARC file in this index.
+    file_newest : str
+        Last WARC file added to this index.
+    """
+
+    file_extent: int
+    file_oldest: str
+    file_newest: str
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 
@@ -258,6 +277,42 @@ def fetch(
         base_url=base_url,
         surt_key=first.surt_key,
         timestamp=first.timestamp,
+    )
+
+
+def extent(
+    *,
+    cdx_url: str | None = None,
+) -> ExtentResult:
+    """Query the extent endpoint for index statistics.
+
+    Parameters
+    ----------
+    cdx_url : str | None
+        Override the CDX lookup endpoint. The ``/extent`` path is derived
+        by replacing the last path segment (e.g. ``/lookup`` → ``/extent``).
+        Falls back to config file, then environment variable ``CDX_LOOKUP_URL``,
+        then hard-coded default.
+
+    Returns
+    -------
+    ExtentResult
+    """
+    if cdx_url is None:
+        cdx_url = _resolve(
+            "cdx-url",
+            default=CDX_LOOKUP_URL,
+            env_var="CDX_LOOKUP_URL",
+        )
+    # Derive extent URL by replacing the last path segment
+    extent_url = cdx_url.rsplit("/", 1)[0] + "/extent"
+    logger.debug("Requesting extent from %s", extent_url)
+
+    data = retry_with_backoff(lambda: requests.get(extent_url, timeout=30)).json()
+    return ExtentResult(
+        file_extent=data["file_extent"],
+        file_oldest=data["file_oldest"],
+        file_newest=data["file_newest"],
     )
 
 
