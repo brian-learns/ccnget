@@ -44,10 +44,9 @@ uv run ccnget config unset cdx-url
 
 Settings are resolved in this order (highest priority first):
 
-1. **CLI argument** (e.g. `lookup --cdx-url http://...`)
-2. **Config file** (set via `ccnget config set`)
-3. **Environment variable** (`CDX_LOOKUP_URL`, `CC_CRAWL_BASE_URL`)
-4. **Hard-coded default**
+1. **Config file** (set via `ccnget config set`)
+2. **Environment variable** (`CDX_LOOKUP_URL`, `CC_CRAWL_BASE_URL`)
+3. **Hard-coded default**
 
 ### Lookup
 
