@@ -1,9 +1,9 @@
-.TH CCNGET "1" "2026\-08\-02" "ccnget 0.1.3" "Generated Python Manual"
+.TH CCNGET "1" "2026\-08\-10" "ccnget 0.1.5" "Generated Python Manual"
 .SH NAME
 ccnget
 .SH SYNOPSIS
 .B ccnget
-[-h] [--loglevel LOGLEVEL] [-v] {lookup,retrieve,fetch} ...
+[-h] [--loglevel LOGLEVEL] [-v] {lookup,retrieve,fetch,config,extent} ...
 .SH DESCRIPTION
 lookup urls and get files from Common Crawl News
 
@@ -18,6 +18,12 @@ Retrieve WARC records from Common Crawl
 .TP
 \fBccnget\fR \fI\,fetch\/\fR
 Lookup and retrieve the first result
+.TP
+\fBccnget\fR \fI\,config\/\fR
+Manage persistent settings
+.TP
+\fBccnget\fR \fI\,extent\/\fR
+Show what content is indexed on the server
 
 .SH COMMAND \fI\,'ccnget lookup'\/\fR
 usage: ccnget lookup [\-h] [\-\-exact] [\-\-at AT] [\-\-limit LIMIT] url
@@ -77,6 +83,51 @@ match if exact=False.
 .TP
 \fB\-\-output\fR \fI\,OUTPUT\/\fR, \fB\-o\fR \fI\,OUTPUT\/\fR
 Output file path (default: stdout)
+
+.SH COMMAND \fI\,'ccnget config'\/\fR
+usage: ccnget config [\-h] {set,get,show,unset} ...
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'ccnget config'\/\fR
+.TP
+\fBccnget config\fR \fI\,set\/\fR
+Set a config value
+.TP
+\fBccnget config\fR \fI\,get\/\fR
+Get a config value
+.TP
+\fBccnget config\fR \fI\,show\/\fR
+Show all config values and sources
+.TP
+\fBccnget config\fR \fI\,unset\/\fR
+Remove a config value
+
+.SH COMMAND \fI\,'ccnget config set'\/\fR
+usage: ccnget config set [\-h] {cdx\-url,cc\-crawl\-base\-url} value
+
+.TP
+\fB{cdx\-url,cc\-crawl\-base\-url}\fR
+
+.TP
+\fBvalue\fR
+
+.SH COMMAND \fI\,'ccnget config get'\/\fR
+usage: ccnget config get [\-h] {cdx\-url,cc\-crawl\-base\-url}
+
+.TP
+\fB{cdx\-url,cc\-crawl\-base\-url}\fR
+
+.SH COMMAND \fI\,'ccnget config show'\/\fR
+usage: ccnget config show [\-h]
+
+.SH COMMAND \fI\,'ccnget config unset'\/\fR
+usage: ccnget config unset [\-h] {cdx\-url,cc\-crawl\-base\-url}
+
+.TP
+\fB{cdx\-url,cc\-crawl\-base\-url}\fR
+
+.SH COMMAND \fI\,'ccnget extent'\/\fR
+usage: ccnget extent [\-h]
 
 .SH OPTIONS
 .TP

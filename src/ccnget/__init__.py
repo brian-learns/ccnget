@@ -24,11 +24,13 @@ Or manage persistent settings:
 
 from ccnget.api import (
     CcngetError,
+    ExtentResult,
     FetchResult,
     LookupEntry,
     LookupResult,
     NoRecordError,
     NotFoundError,
+    extent,
     fetch,
     lookup,
     retrieve,
@@ -43,11 +45,13 @@ from ccnget.config import (
 
 __all__ = [
     "CcngetError",
+    "ExtentResult",
     "FetchResult",
     "LookupEntry",
     "LookupResult",
     "NoRecordError",
     "NotFoundError",
+    "extent",
     "fetch",
     "get_config",
     "list_config",
