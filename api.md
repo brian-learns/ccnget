@@ -25,6 +25,71 @@ Or manage persistent settings:
 'http://localhost:8000/lookup'
 ```
 
+<a id="ccnget.config"></a>
+
+# ccnget.config
+
+Persistent configuration management for ccnget.
+
+Reads/writes a JSON file under the user config directory
+(platformdirs: ~/.config/ccnget/config.json on Linux).
+
+Resolution chain (highest priority first):
+    1. CLI flag / function argument (explicit override)
+    2. Config file (set via ``ccnget config set``)
+    3. Environment variable
+    4. Hard-coded default
+
+<a id="ccnget.config.get_config"></a>
+
+#### get\_config
+
+```python
+def get_config(key: str) -> str | None
+```
+
+Return the value for *key* from the config file, or ``None`` if not set.
+
+<a id="ccnget.config.set_config"></a>
+
+#### set\_config
+
+```python
+def set_config(key: str, value: str) -> None
+```
+
+Persist *value* for *key* in the config file.
+
+<a id="ccnget.config.unset_config"></a>
+
+#### unset\_config
+
+```python
+def unset_config(key: str) -> None
+```
+
+Remove *key* from the config file.
+
+<a id="ccnget.config.list_config"></a>
+
+#### list\_config
+
+```python
+def list_config() -> dict[str, dict[str, str | None]]
+```
+
+Return all config keys with their resolved values and sources.
+
+<a id="ccnget.config.show_config_path"></a>
+
+#### show\_config\_path
+
+```python
+def show_config_path() -> str
+```
+
+Return the path to the config file.
+
 <a id="ccnget.geturl"></a>
 
 # ccnget.geturl
@@ -174,71 +239,6 @@ requests.exceptions.RequestException
 requests.exceptions.HTTPError
     Raised by ``response.raise_for_status()`` for non-retryable
     HTTP errors (4xx).
-
-<a id="ccnget.config"></a>
-
-# ccnget.config
-
-Persistent configuration management for ccnget.
-
-Reads/writes a JSON file under the user config directory
-(platformdirs: ~/.config/ccnget/config.json on Linux).
-
-Resolution chain (highest priority first):
-    1. CLI flag / function argument (explicit override)
-    2. Config file (set via ``ccnget config set``)
-    3. Environment variable
-    4. Hard-coded default
-
-<a id="ccnget.config.get_config"></a>
-
-#### get\_config
-
-```python
-def get_config(key: str) -> str | None
-```
-
-Return the value for *key* from the config file, or ``None`` if not set.
-
-<a id="ccnget.config.set_config"></a>
-
-#### set\_config
-
-```python
-def set_config(key: str, value: str) -> None
-```
-
-Persist *value* for *key* in the config file.
-
-<a id="ccnget.config.unset_config"></a>
-
-#### unset\_config
-
-```python
-def unset_config(key: str) -> None
-```
-
-Remove *key* from the config file.
-
-<a id="ccnget.config.list_config"></a>
-
-#### list\_config
-
-```python
-def list_config() -> dict[str, dict[str, str | None]]
-```
-
-Return all config keys with their resolved values and sources.
-
-<a id="ccnget.config.show_config_path"></a>
-
-#### show\_config\_path
-
-```python
-def show_config_path() -> str
-```
-
-Return the path to the config file.
 
 <a id="ccnget.api"></a>
 

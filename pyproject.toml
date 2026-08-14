@@ -1,6 +1,6 @@
 [project]
 name = "ccnget"
-version = "0.1.5"
+version = "0.1.6"
 description = "lookup urls and get files from Common Crawl News"
 readme = "README.md"
 authors = [
