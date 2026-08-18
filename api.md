@@ -20,75 +20,10 @@ Or use the lower-level API:
 ...     result = ccnget.retrieve(entry.warc_path, entry.offset, entry.length)
 
 Or manage persistent settings:
->>> ccnget.set_config("cdx-url", "http://localhost:8000/lookup")
+>>> ccnget.set_config("cdx-url", "http://localhost:8000")
 >>> ccnget.get_config("cdx-url")
-'http://localhost:8000/lookup'
+'http://localhost:8000'
 ```
-
-<a id="ccnget.config"></a>
-
-# ccnget.config
-
-Persistent configuration management for ccnget.
-
-Reads/writes a JSON file under the user config directory
-(platformdirs: ~/.config/ccnget/config.json on Linux).
-
-Resolution chain (highest priority first):
-    1. CLI flag / function argument (explicit override)
-    2. Config file (set via ``ccnget config set``)
-    3. Environment variable
-    4. Hard-coded default
-
-<a id="ccnget.config.get_config"></a>
-
-#### get\_config
-
-```python
-def get_config(key: str) -> str | None
-```
-
-Return the value for *key* from the config file, or ``None`` if not set.
-
-<a id="ccnget.config.set_config"></a>
-
-#### set\_config
-
-```python
-def set_config(key: str, value: str) -> None
-```
-
-Persist *value* for *key* in the config file.
-
-<a id="ccnget.config.unset_config"></a>
-
-#### unset\_config
-
-```python
-def unset_config(key: str) -> None
-```
-
-Remove *key* from the config file.
-
-<a id="ccnget.config.list_config"></a>
-
-#### list\_config
-
-```python
-def list_config() -> dict[str, dict[str, str | None]]
-```
-
-Return all config keys with their resolved values and sources.
-
-<a id="ccnget.config.show_config_path"></a>
-
-#### show\_config\_path
-
-```python
-def show_config_path() -> str
-```
-
-Return the path to the config file.
 
 <a id="ccnget.geturl"></a>
 
@@ -240,6 +175,71 @@ requests.exceptions.HTTPError
     Raised by ``response.raise_for_status()`` for non-retryable
     HTTP errors (4xx).
 
+<a id="ccnget.config"></a>
+
+# ccnget.config
+
+Persistent configuration management for ccnget.
+
+Reads/writes a JSON file under the user config directory
+(platformdirs: ~/.config/ccnget/config.json on Linux).
+
+Resolution chain (highest priority first):
+    1. CLI flag / function argument (explicit override)
+    2. Config file (set via ``ccnget config set``)
+    3. Environment variable
+    4. Hard-coded default
+
+<a id="ccnget.config.get_config"></a>
+
+#### get\_config
+
+```python
+def get_config(key: str) -> str | None
+```
+
+Return the value for *key* from the config file, or ``None`` if not set.
+
+<a id="ccnget.config.set_config"></a>
+
+#### set\_config
+
+```python
+def set_config(key: str, value: str) -> None
+```
+
+Persist *value* for *key* in the config file.
+
+<a id="ccnget.config.unset_config"></a>
+
+#### unset\_config
+
+```python
+def unset_config(key: str) -> None
+```
+
+Remove *key* from the config file.
+
+<a id="ccnget.config.list_config"></a>
+
+#### list\_config
+
+```python
+def list_config() -> dict[str, dict[str, str | None]]
+```
+
+Return all config keys with their resolved values and sources.
+
+<a id="ccnget.config.show_config_path"></a>
+
+#### show\_config\_path
+
+```python
+def show_config_path() -> str
+```
+
+Return the path to the config file.
+
 <a id="ccnget.api"></a>
 
 # ccnget.api
@@ -351,8 +351,8 @@ limit : int
 at : str | None
     Timestamp filter (YYYYMMDDhhmmss).
 cdx_url : str | None
-    Override the CDX lookup endpoint. Falls back to config file,
-    then environment variable ``CDX_LOOKUP_URL``, then hard-coded default.
+    Override the CDX server base URL. Falls back to config file,
+    then environment variable ``CDX_URL``, then hard-coded default.
 
 Returns
 -------
@@ -420,8 +420,8 @@ exact : bool
 at : str | None
     Timestamp filter (YYYYMMDDhhmmss).
 cdx_url : str | None
-    Override the CDX lookup endpoint. Falls back to config file,
-    then environment variable ``CDX_LOOKUP_URL``, then hard-coded default.
+    Override the CDX server base URL. Falls back to config file,
+    then environment variable ``CDX_URL``, then hard-coded default.
 base_url : str | None
     Override the Common Crawl base URL. Falls back to config file,
     then environment variable ``CC_CRAWL_BASE_URL``, then hard-coded default.
@@ -443,10 +443,9 @@ Query the extent endpoint for index statistics.
 Parameters
 ----------
 cdx_url : str | None
-    Override the CDX lookup endpoint. The ``/extent`` path is derived
-    by replacing the last path segment (e.g. ``/lookup`` → ``/extent``).
-    Falls back to config file, then environment variable ``CDX_LOOKUP_URL``,
-    then hard-coded default.
+    Override the CDX server base URL. The ``/cdx-index/extent`` path is
+    appended to the base. Falls back to config file, then environment
+    variable ``CDX_URL``, then hard-coded default.
 
 Returns
 -------

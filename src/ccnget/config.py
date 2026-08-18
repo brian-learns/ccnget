@@ -27,8 +27,8 @@ CONFIG_FILE: Path = CONFIG_DIR / "config.json"
 # Valid config keys and their defaults
 KNOWN_KEYS: dict[str, tuple[str, str | None]] = {
     "cdx-url": (
-        "https://brian-learns-cc-news-cdx-server.hf.space/lookup",
-        "CDX_LOOKUP_URL",
+        "https://brian-learns-cc-news-cdx-server.hf.space/",
+        "CDX_URL",
     ),
     "cc-crawl-base-url": (
         "https://data.commoncrawl.org",

@@ -1,8 +1,8 @@
 [ENVIRONMENT]
 .TP
-.BI CDX_LOOKUP_URL
-The URL for the CDX server lookup. 
-Default: \fIhttps://brian-learns-cc-news-cdx-server.hf.space/lookup\fR
+.BI CDX_URL
+The base URL for the CDX index server. 
+Default: \fIhttps://brian-learns-cc-news-cdx-server.hf.space/\fR
 .TP
 .BI CC_CRAWL_BASE_URL
 The base URL for downloading Common Crawl data. 

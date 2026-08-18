@@ -27,7 +27,7 @@ class TestSetGetUnset:
     def _setup(self, tmp_path: Path) -> Path:
         """Patch CONFIG_DIR/CONFIG_FILE to use tmp_path."""
         cfg_file = tmp_path / "config.json"
-        os.environ.pop("CDX_LOOKUP_URL", None)
+        os.environ.pop("CDX_URL", None)
         os.environ.pop("CC_CRAWL_BASE_URL", None)
         return cfg_file
 
@@ -101,15 +101,15 @@ class TestResolve:
     @patch("ccnget.config._load_config")
     def test_config_file_wins(self, mock_load):
         mock_load.return_value = {"cdx-url": "http://config-val/lookup"}
-        with patch.dict(os.environ, {"CDX_LOOKUP_URL": "http://env-val/lookup"}):
-            result = _resolve("cdx-url", default="http://default/lookup", env_var="CDX_LOOKUP_URL")
+        with patch.dict(os.environ, {"CDX_URL": "http://env-val/lookup"}):
+            result = _resolve("cdx-url", default="http://default/lookup", env_var="CDX_URL")
             assert result == "http://config-val/lookup"
 
     @patch("ccnget.config._load_config")
     def test_env_var_wins_over_default(self, mock_load):
         mock_load.return_value = {}
-        with patch.dict(os.environ, {"CDX_LOOKUP_URL": "http://env-val/lookup"}):
-            result = _resolve("cdx-url", default="http://default/lookup", env_var="CDX_LOOKUP_URL")
+        with patch.dict(os.environ, {"CDX_URL": "http://env-val/lookup"}):
+            result = _resolve("cdx-url", default="http://default/lookup", env_var="CDX_URL")
             assert result == "http://env-val/lookup"
 
     @patch("ccnget.config._load_config")
@@ -117,8 +117,8 @@ class TestResolve:
         mock_load.return_value = {}
         with patch.dict(os.environ, {}, clear=True):
             # Remove env var if it exists
-            os.environ.pop("CDX_LOOKUP_URL", None)
-            result = _resolve("cdx-url", default="http://default/lookup", env_var="CDX_LOOKUP_URL")
+            os.environ.pop("CDX_URL", None)
+            result = _resolve("cdx-url", default="http://default/lookup", env_var="CDX_URL")
             assert result == "http://default/lookup"
 
     @patch("ccnget.config._load_config")
@@ -135,7 +135,7 @@ class TestListConfig:
     def test_list_all_defaults(self, mock_load):
         mock_load.return_value = {}
         with patch.dict(os.environ, {}, clear=True):
-            os.environ.pop("CDX_LOOKUP_URL", None)
+            os.environ.pop("CDX_URL", None)
             os.environ.pop("CC_CRAWL_BASE_URL", None)
             result = list_config()
             assert "cdx-url" in result
@@ -146,9 +146,9 @@ class TestListConfig:
     @patch("ccnget.config._load_config")
     def test_list_shows_env_source(self, mock_load):
         mock_load.return_value = {}
-        with patch.dict(os.environ, {"CDX_LOOKUP_URL": "http://env/lookup"}):
+        with patch.dict(os.environ, {"CDX_URL": "http://env/lookup"}):
             result = list_config()
-            assert result["cdx-url"]["source"] == "env (CDX_LOOKUP_URL)"
+            assert result["cdx-url"]["source"] == "env (CDX_URL)"
             assert result["cdx-url"]["value"] == "http://env/lookup"
 
     @patch("ccnget.config._load_config")
@@ -171,7 +171,7 @@ class TestKnownKeys:
         assert "cdx-url" in KNOWN_KEYS
         assert "cc-crawl-base-url" in KNOWN_KEYS
         # Each entry is (default, env_var)
-        assert KNOWN_KEYS["cdx-url"][1] == "CDX_LOOKUP_URL"
+        assert KNOWN_KEYS["cdx-url"][1] == "CDX_URL"
         assert KNOWN_KEYS["cc-crawl-base-url"][1] == "CC_CRAWL_BASE_URL"
 
 

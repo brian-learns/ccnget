@@ -2,7 +2,7 @@
 
 Search over 1.4 Billion archived news URLs from CC-NEWS and retrieve contents from WARC files.
 
-`/lookup?` Endpoint [🤗 Hugging Face Space (2023-2024)](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server) | [🐳 docker compose (2016-Aug to 2026-July)](https://github.com/brian-learns/cdx_rocks) 
+`/cdx-index/lookup` Endpoint [🤗 Hugging Face Space (2023-2024)](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server) | [🐳 docker compose (2016-Aug to 2026-July)](https://github.com/brian-learns/cdx_rocks) 
 
 ## Quickstart
 Running the command
@@ -22,7 +22,7 @@ Or use as a library, as [demonstrated in this google colab](https://colab.resear
 
 This repository contains a python command for looking up and retrieving URLs from the [WARC files on S3](https://data.commoncrawl.org/crawl-data/CC-NEWS/index.html).
 
-[`webrecorder/cdxj-indexer`](https://github.com/webrecorder/cdxj-indexer) was used to create a [Hugging Face Dataset `brian-learns/cdx-cc-news`](https://huggingface.co/datasets/brian-learns/cdx-cc-news) with CDXj sorted by month and parquet files.  Rocks DB was used to create a bloom filter index that powers a [URL lookup tool](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server) served from a HuggingFace Space that provides a simple FastAPI `/lookup` endpoint.
+[`webrecorder/cdxj-indexer`](https://github.com/webrecorder/cdxj-indexer) was used to create a [Hugging Face Dataset `brian-learns/cdx-cc-news`](https://huggingface.co/datasets/brian-learns/cdx-cc-news) with CDXj sorted by month and parquet files.  Rocks DB was used to create a bloom filter index that powers a [URL lookup tool](https://huggingface.co/spaces/brian-learns/cc-news-cdx-server) served from a HuggingFace Space that provides a simple FastAPI `/cdx-index/lookup` endpoint.
 
 ## Install
 
@@ -39,19 +39,23 @@ uv run ccnget --help
 
 ### Config
 
-Set a persistent lookup endpoint (stored in user config directory):
+Set a persistent lookup server base URL (stored in user config directory):
 
 ```bash
-uv run ccnget config set cdx-url http://localhost:8000/lookup
+uv run ccnget config set cdx-url http://localhost:8000
 uv run ccnget config show
 uv run ccnget config get cdx-url
 uv run ccnget config unset cdx-url
 ```
 
+The client appends `/cdx-index/lookup` and `/cdx-index/extent` to this base.
+Old values ending in `/lookup` or `/cdx-index/lookup` are still accepted
+(the endpoint suffix is trimmed).
+
 Settings are resolved in this order (highest priority first):
 
 1. **Config file** (set via `ccnget config set`)
-2. **Environment variable** (`CDX_LOOKUP_URL`, `CC_CRAWL_BASE_URL`)
+2. **Environment variable** (`CDX_URL`, `CC_CRAWL_BASE_URL`)
 3. **Hard-coded default**
 
 ### Lookup
@@ -93,8 +97,8 @@ uv run ccnget fetch "http://example.com" -o article.html
 
 ## Environment
 
- * **`CDX_LOOKUP_URL`** The URL for the CDX server lookup.
-   * Default: *`https://brian-learns-cc-news-cdx-server.hf.space/lookup`*
+ * **`CDX_URL`** The base URL for the CDX index server.
+   * Default: *`https://brian-learns-cc-news-cdx-server.hf.space/`*
  * **`CC_CRAWL_BASE_URL`** The base URL for downloading Common Crawl data.
    * Default: *`https://data.commoncrawl.org`*
 
@@ -123,7 +127,7 @@ While most of this was vibe coded, I drew this architecture diagram in monodraw 
  ┌────────────────────────────────┐   ││          
  │Huggingface Space               │   ││          
  │ - rocksdb (75.1 GB, 1116 files)│   ││          
- │ - fastapi /lookup?             │   ││          
+ │ - fastapi /cdx-index/lookup?   │   ││          
  └────┬▲──────────────────────────┘   ││          
       ││                              ││          
       ││                              ││          
