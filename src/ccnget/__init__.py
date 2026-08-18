@@ -16,9 +16,9 @@ Or use the lower-level API:
 ...     result = ccnget.retrieve(entry.warc_path, entry.offset, entry.length)
 
 Or manage persistent settings:
->>> ccnget.set_config("cdx-url", "http://localhost:8000/lookup")
+>>> ccnget.set_config("cdx-url", "http://localhost:8000")
 >>> ccnget.get_config("cdx-url")
-'http://localhost:8000/lookup'
+'http://localhost:8000'
 ```
 """
 

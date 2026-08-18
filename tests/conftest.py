@@ -8,7 +8,7 @@ import os
 import pytest
 
 # Env vars that load_dotenv() may set from the project .env file
-_CC_ENV_VARS = ("CDX_LOOKUP_URL", "CC_CRAWL_BASE_URL")
+_CC_ENV_VARS = ("CDX_URL", "CC_CRAWL_BASE_URL")
 
 
 @pytest.fixture(autouse=True)

@@ -28,7 +28,7 @@ from ccnget.retry import retry_with_backoff
 logger: logging.Logger = logging.getLogger(__name__)
 
 # Hard-coded defaults (overridden by config file or env vars at runtime)
-CDX_LOOKUP_URL: str = KNOWN_KEYS["cdx-url"][0]
+CDX_URL: str = KNOWN_KEYS["cdx-url"][0]
 CC_CRAWL_BASE_URL: str = KNOWN_KEYS["cc-crawl-base-url"][0]
 
 
@@ -122,6 +122,39 @@ def _entry_from_dict(d: dict[str, Any]) -> LookupEntry:
     return LookupEntry(extra=extra, **base)  # type: ignore[arg-type]
 
 
+# Trailing endpoint paths that may be stored in a legacy ``cdx-url`` value.
+# Checked longest-first so ``…/cdx-index/lookup`` isn't misread as ``…/lookup``.
+_CDX_ENDPOINT_SUFFIXES: tuple[str, ...] = (
+    "/cdx-index/lookup",
+    "/lookup",
+)
+
+
+def _cdx_base(url: str) -> str:
+    """Normalize a configured ``cdx-url`` value to a server base URL.
+
+    ``cdx-url`` is a server *base* URL; the client appends the endpoint
+    paths (``/cdx-index/lookup``, ``/cdx-index/extent``). Older
+    configurations may still store an endpoint URL instead — a trailing
+    ``/lookup`` (or the new ``/cdx-index/lookup`` form) is stripped so
+    those values keep working.
+
+    >>> _cdx_base("https://host/")
+    'https://host'
+    >>> _cdx_base("https://host/lookup")
+    'https://host'
+    >>> _cdx_base("https://host/cdx-index/lookup")
+    'https://host'
+    >>> _cdx_base("http://0.0.0.0:8000/lookup/")
+    'http://0.0.0.0:8000'
+    """
+    base = url.rstrip("/")
+    for suffix in _CDX_ENDPOINT_SUFFIXES:
+        if base.endswith(suffix):
+            return base[: -len(suffix)]
+    return base
+
+
 # ── Public API ────────────────────────────────────────────────────────────
 
 
@@ -146,8 +179,8 @@ def lookup(
     at : str | None
         Timestamp filter (YYYYMMDDhhmmss).
     cdx_url : str | None
-        Override the CDX lookup endpoint. Falls back to config file,
-        then environment variable ``CDX_LOOKUP_URL``, then hard-coded default.
+        Override the CDX server base URL. Falls back to config file,
+        then environment variable ``CDX_URL``, then hard-coded default.
 
     Returns
     -------
@@ -156,13 +189,14 @@ def lookup(
     if cdx_url is None:
         cdx_url = _resolve(
             "cdx-url",
-            default=CDX_LOOKUP_URL,
-            env_var="CDX_LOOKUP_URL",
+            default=CDX_URL,
+            env_var="CDX_URL",
         )
+    lookup_url = _cdx_base(cdx_url) + "/cdx-index/lookup"
     params = {"url": url, "exact": exact, "limit": limit, "at": at}
-    logger.debug("Requesting %s with params %s", cdx_url, params)
+    logger.debug("Requesting %s with params %s", lookup_url, params)
 
-    data = retry_with_backoff(lambda: requests.get(cdx_url, params=params, timeout=30)).json()
+    data = retry_with_backoff(lambda: requests.get(lookup_url, params=params, timeout=30)).json()
     entries = [_entry_from_dict(r) for r in data.get("results", [])]
     return LookupResult(url=url, entries=entries)
 
@@ -254,8 +288,8 @@ def fetch(
     at : str | None
         Timestamp filter (YYYYMMDDhhmmss).
     cdx_url : str | None
-        Override the CDX lookup endpoint. Falls back to config file,
-        then environment variable ``CDX_LOOKUP_URL``, then hard-coded default.
+        Override the CDX server base URL. Falls back to config file,
+        then environment variable ``CDX_URL``, then hard-coded default.
     base_url : str | None
         Override the Common Crawl base URL. Falls back to config file,
         then environment variable ``CC_CRAWL_BASE_URL``, then hard-coded default.
@@ -289,10 +323,9 @@ def extent(
     Parameters
     ----------
     cdx_url : str | None
-        Override the CDX lookup endpoint. The ``/extent`` path is derived
-        by replacing the last path segment (e.g. ``/lookup`` → ``/extent``).
-        Falls back to config file, then environment variable ``CDX_LOOKUP_URL``,
-        then hard-coded default.
+        Override the CDX server base URL. The ``/cdx-index/extent`` path is
+        appended to the base. Falls back to config file, then environment
+        variable ``CDX_URL``, then hard-coded default.
 
     Returns
     -------
@@ -301,11 +334,10 @@ def extent(
     if cdx_url is None:
         cdx_url = _resolve(
             "cdx-url",
-            default=CDX_LOOKUP_URL,
-            env_var="CDX_LOOKUP_URL",
+            default=CDX_URL,
+            env_var="CDX_URL",
         )
-    # Derive extent URL by replacing the last path segment
-    extent_url = cdx_url.rsplit("/", 1)[0] + "/extent"
+    extent_url = _cdx_base(cdx_url) + "/cdx-index/extent"
     logger.debug("Requesting extent from %s", extent_url)
 
     data = retry_with_backoff(lambda: requests.get(extent_url, timeout=30)).json()

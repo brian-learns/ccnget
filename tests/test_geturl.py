@@ -7,12 +7,17 @@ from warcio.warcwriter import WARCWriter
 
 from ccnget.api import (
     CcngetError,
+    ExtentResult,
     FetchResult,
     LookupEntry,
     LookupResult,
     NoRecordError,
     NotFoundError,
+    _cdx_base,
     _entry_from_dict,
+)
+from ccnget.api import (
+    extent as api_extent,
 )
 from ccnget.api import (
     fetch as api_fetch,
@@ -122,14 +127,14 @@ class TestLookupCmd:
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
         mock_get.return_value = mock_response
-        mock_resolve.return_value = "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
+        mock_resolve.return_value = "https://brian-learns-cc-news-cdx-server.hf.space/"
 
         args = argparse.Namespace(url="http://example.com", exact=False, limit=10, at=None)
         lookup_cmd(args)
 
         mock_get.assert_called_once()
         call_args = mock_get.call_args
-        assert call_args[0][0] == "https://brian-learns-cc-news-cdx-server.hf.space/lookup"
+        assert call_args[0][0] == "https://brian-learns-cc-news-cdx-server.hf.space/cdx-index/lookup"
         assert call_args[1]["params"]["url"] == "http://example.com"
         assert call_args[1]["params"]["exact"] is False
         assert call_args[1]["params"]["limit"] == 10
@@ -386,8 +391,8 @@ class TestLookup:
         mock_response.json.return_value = {"results": []}
         mock_get.return_value = mock_response
 
-        api_lookup("http://example.com", cdx_url="http://custom-cdx/lookup")
-        assert mock_get.call_args[0][0] == "http://custom-cdx/lookup"
+        api_lookup("http://example.com", cdx_url="http://custom-cdx")
+        assert mock_get.call_args[0][0] == "http://custom-cdx/cdx-index/lookup"
 
     @patch("ccnget.api.requests.get")
     def test_lookup_retry_on_timeout(self, mock_get):
@@ -402,6 +407,33 @@ class TestLookup:
         result = api_lookup("http://example.com")
         assert isinstance(result, LookupResult)
         assert mock_get.call_count == 2
+
+
+class TestCdxBase:
+    """Test _cdx_base normalization of cdx-url to a server base URL."""
+
+    def test_trailing_slash(self):
+        assert _cdx_base("https://host/") == "https://host"
+
+    def test_lookup_suffix_stripped(self):
+        assert _cdx_base("https://host/lookup") == "https://host"
+
+    def test_new_format_endpoint_stripped(self):
+        assert _cdx_base("https://host/cdx-index/lookup") == "https://host"
+
+    def test_new_format_endpoint_with_trailing_slash(self):
+        assert _cdx_base("http://0.0.0.0:7860/cdx-index/lookup/") == "http://0.0.0.0:7860"
+
+    def test_lookup_suffix_with_trailing_slash(self):
+        assert _cdx_base("http://0.0.0.0:8000/lookup/") == "http://0.0.0.0:8000"
+
+    def test_bare_host_unchanged(self):
+        assert _cdx_base("http://0.0.0.0:8000") == "http://0.0.0.0:8000"
+
+    def test_default_base(self):
+        assert _cdx_base("https://brian-learns-cc-news-cdx-server.hf.space/") == (
+            "https://brian-learns-cc-news-cdx-server.hf.space"
+        )
 
 
 class TestRetrieve:
@@ -520,6 +552,54 @@ class TestFetch:
 
         with pytest.raises(NotFoundError, match="No archived results"):
             api_fetch("http://nonexistent.example")
+
+
+class TestExtent:
+    @patch("ccnget.api._resolve")
+    @patch("ccnget.api.requests.get")
+    def test_extent_default_base(self, mock_get, mock_resolve):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "file_extent": 14542,
+            "file_oldest": "crawl-data/CC-NEWS/2023/01/x.warc.gz",
+            "file_newest": "crawl-data/CC-NEWS/2024/12/y.warc.gz",
+        }
+        mock_get.return_value = mock_response
+        mock_resolve.return_value = "https://brian-learns-cc-news-cdx-server.hf.space/"
+
+        result = api_extent()
+        assert isinstance(result, ExtentResult)
+        assert result.file_extent == 14542
+        assert mock_get.call_args[0][0] == (
+            "https://brian-learns-cc-news-cdx-server.hf.space/cdx-index/extent"
+        )
+
+    @patch("ccnget.api.requests.get")
+    def test_extent_custom_cdx_url(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "file_extent": 1,
+            "file_oldest": "a.warc.gz",
+            "file_newest": "b.warc.gz",
+        }
+        mock_get.return_value = mock_response
+
+        api_extent(cdx_url="http://custom-cdx/")
+        assert mock_get.call_args[0][0] == "http://custom-cdx/cdx-index/extent"
+
+    @patch("ccnget.api.requests.get")
+    def test_extent_accepts_legacy_lookup_url(self, mock_get):
+        """Old config values ending in /lookup still resolve to the new path."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "file_extent": 1,
+            "file_oldest": "a.warc.gz",
+            "file_newest": "b.warc.gz",
+        }
+        mock_get.return_value = mock_response
+
+        api_extent(cdx_url="http://0.0.0.0:8000/lookup")
+        assert mock_get.call_args[0][0] == "http://0.0.0.0:8000/cdx-index/extent"
 
 
 class TestExceptions:
