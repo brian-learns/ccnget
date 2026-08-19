@@ -43,6 +43,26 @@ def limited_int(val_str: str) -> int
 
 Checks that input is an integer between 1 and 100.
 
+<a id="ccnget.geturl.browse_limit"></a>
+
+#### browse\_limit
+
+```python
+def browse_limit(val_str: str) -> int
+```
+
+Checks that input is an integer between 1 and 200 (surt-browse page size).
+
+<a id="ccnget.geturl.non_negative_int"></a>
+
+#### non\_negative\_int
+
+```python
+def non_negative_int(val_str: str) -> int
+```
+
+Checks that input is an integer of 0 or greater.
+
 <a id="ccnget.geturl.lookup_cmd"></a>
 
 #### lookup\_cmd
@@ -112,6 +132,26 @@ def extent_cmd(args: argparse.Namespace) -> None
 ```
 
 Execute the extent subcommand.
+
+<a id="ccnget.geturl.surt_browse_cmd"></a>
+
+#### surt\_browse\_cmd
+
+```python
+def surt_browse_cmd(args: argparse.Namespace) -> None
+```
+
+Execute the surt-browse subcommand.
+
+<a id="ccnget.geturl.surt_prefix_cmd"></a>
+
+#### surt\_prefix\_cmd
+
+```python
+def surt_prefix_cmd(args: argparse.Namespace) -> None
+```
+
+Execute the surt-prefix subcommand.
 
 <a id="ccnget.geturl.main"></a>
 
@@ -325,6 +365,60 @@ file_oldest : str
 file_newest : str
     Last WARC file added to this index.
 
+<a id="ccnget.api.SurtBrowseResult"></a>
+
+## SurtBrowseResult Objects
+
+```python
+@dataclass
+class SurtBrowseResult()
+```
+
+Result of one hop down the SURT host tree.
+
+Attributes
+----------
+pattern : str
+    Pattern browsed (``''`` is the root level).
+count : int
+    Indexed entries under this exact host pattern.
+total_entries : int
+    Total entries in the whole index.
+children : dict[str, int]
+    Direct children (pattern -> count), rank order (count desc, name asc),
+    capped by ``limit``. Each key is also the ``pattern`` to fetch the
+    next level.
+total_children : int
+    Number of children before ``limit`` was applied.
+offset : int
+    Children skipped before this page (0-based).
+limit : int
+    Page size that was applied.
+next_offset : int | None
+    Offset for the next page; ``None`` on the last page.
+
+<a id="ccnget.api.SurtScanResult"></a>
+
+## SurtScanResult Objects
+
+```python
+@dataclass
+class SurtScanResult()
+```
+
+Result of a SURT prefix scan.
+
+Attributes
+----------
+surt_prefix : str
+    SURT string used for the lookup.
+total_results : int
+    Number of results returned (capped by ``limit``, not a true total).
+limit : int
+    Maximum results cap requested.
+results : list[LookupEntry]
+    Matched WARC captures in key order (SURT, then timestamp).
+
 <a id="ccnget.api.lookup"></a>
 
 #### lookup
@@ -450,6 +544,70 @@ cdx_url : str | None
 Returns
 -------
 ExtentResult
+
+<a id="ccnget.api.surt_browse"></a>
+
+#### surt\_browse
+
+```python
+def surt_browse(pattern: str = "",
+                *,
+                limit: int = 50,
+                offset: int = 0,
+                cdx_url: str | None = None) -> SurtBrowseResult
+```
+
+Browse the index's SURT host tree one level at a time.
+
+Parameters
+----------
+pattern : str
+    Pattern to expand; ``''`` (default) is the root level. Children
+    returned by a previous call can be passed back in to descend one
+    more level.
+limit : int
+    Maximum number of children to return (1-200, default 50).
+offset : int
+    Children to skip before applying ``limit`` (default 0).
+cdx_url : str | None
+    Override the CDX server base URL. The ``/cdx-index/surt-browse``
+    path is appended to the base. Falls back to config file, then
+    environment variable ``CDX_URL``, then hard-coded default.
+
+Returns
+-------
+SurtBrowseResult
+
+<a id="ccnget.api.surt_prefix"></a>
+
+#### surt\_prefix
+
+```python
+def surt_prefix(prefix: str,
+                *,
+                limit: int = 10,
+                cdx_url: str | None = None) -> SurtScanResult
+```
+
+Wildcard search: find capture records under a SURT prefix.
+
+Parameters
+----------
+prefix : str
+    SURT string to scan, e.g. ``com,aa`` (host + subdomains) or
+    ``com,aaa,ace)/activities`` (path prefix of ace.aaa.com).
+limit : int
+    Maximum number of results to return (1-100, default 10).
+cdx_url : str | None
+    Override the CDX server base URL. The ``/cdx-index/surt-prefix``
+    path is appended to the base. Falls back to config file, then
+    environment variable ``CDX_URL``, then hard-coded default.
+
+Returns
+-------
+SurtScanResult
+    Results in key order (SURT, then timestamp). ``total_results`` is
+    the number returned, not a true total.
 
 <a id="ccnget.api.CcngetError"></a>
 

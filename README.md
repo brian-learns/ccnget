@@ -48,7 +48,8 @@ uv run ccnget config get cdx-url
 uv run ccnget config unset cdx-url
 ```
 
-The client appends `/cdx-index/lookup` and `/cdx-index/extent` to this base.
+The client appends `/cdx-index/lookup`, `/cdx-index/extent`,
+`/cdx-index/surt-browse`, and `/cdx-index/surt-prefix` to this base.
 Old values ending in `/lookup` or `/cdx-index/lookup` are still accepted
 (the endpoint suffix is trimmed).
 
@@ -93,6 +94,39 @@ Lookup and retrieve the first result in one step:
 
 ```bash
 uv run ccnget fetch "http://example.com" -o article.html
+```
+
+### Extent
+
+Show what content is indexed on the server:
+
+```bash
+uv run ccnget extent
+```
+
+### Surt Browse
+
+Browse the hosts indexed on the server, one level of the SURT tree at a
+time. Start at the root level, then descend using any child pattern from
+the result:
+
+```bash
+uv run ccnget surt-browse                 # root level, 50 children
+uv run ccnget surt-browse com,aa          # one level down
+uv run ccnget surt-browse com,aa --limit 200 --offset 50
+```
+
+`next_offset` in the output is the `--offset` for the next page (null on
+the last page).
+
+### Surt Prefix
+
+Prefix search: find capture records under a SURT prefix, e.g.
+`com,aa` (host + subdomains) or `com,aaa,ace)/activities` (path prefix of
+ace.aaa.com):
+
+```bash
+uv run ccnget surt-prefix com,aa --limit 20
 ```
 
 ## Environment

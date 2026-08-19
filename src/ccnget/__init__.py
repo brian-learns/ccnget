@@ -30,10 +30,14 @@ from ccnget.api import (
     LookupResult,
     NoRecordError,
     NotFoundError,
+    SurtBrowseResult,
+    SurtScanResult,
     extent,
     fetch,
     lookup,
     retrieve,
+    surt_browse,
+    surt_prefix,
 )
 from ccnget.config import (
     get_config,
@@ -51,6 +55,8 @@ __all__ = [
     "LookupResult",
     "NoRecordError",
     "NotFoundError",
+    "SurtBrowseResult",
+    "SurtScanResult",
     "extent",
     "fetch",
     "get_config",
@@ -59,5 +65,7 @@ __all__ = [
     "retrieve",
     "set_config",
     "show_config_path",
+    "surt_browse",
+    "surt_prefix",
     "unset_config",
 ]

@@ -103,6 +103,64 @@ class ExtentResult:
     file_newest: str
 
 
+@dataclass
+class SurtBrowseResult:
+    """Result of one hop down the SURT host tree.
+
+    Attributes
+    ----------
+    pattern : str
+        Pattern browsed (``''`` is the root level).
+    count : int
+        Indexed entries under this exact host pattern.
+    total_entries : int
+        Total entries in the whole index.
+    children : dict[str, int]
+        Direct children (pattern -> count), rank order (count desc, name asc),
+        capped by ``limit``. Each key is also the ``pattern`` to fetch the
+        next level.
+    total_children : int
+        Number of children before ``limit`` was applied.
+    offset : int
+        Children skipped before this page (0-based).
+    limit : int
+        Page size that was applied.
+    next_offset : int | None
+        Offset for the next page; ``None`` on the last page.
+    """
+
+    pattern: str
+    count: int
+    total_entries: int
+    children: dict[str, int]
+    total_children: int
+    offset: int = 0
+    limit: int = 50
+    next_offset: int | None = None
+
+
+@dataclass
+class SurtScanResult:
+    """Result of a SURT prefix scan.
+
+    Attributes
+    ----------
+    surt_prefix : str
+        SURT string used for the lookup.
+    total_results : int
+        Number of results returned (capped by ``limit``, not a true total).
+    limit : int
+        Maximum results cap requested.
+    results : list[LookupEntry]
+        Matched WARC captures in key order (SURT, then timestamp).
+    """
+
+    surt_prefix: str
+    total_results: int
+    limit: int
+    results: list[LookupEntry]
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 
@@ -345,6 +403,102 @@ def extent(
         file_extent=data["file_extent"],
         file_oldest=data["file_oldest"],
         file_newest=data["file_newest"],
+    )
+
+
+def surt_browse(
+    pattern: str = "",
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    cdx_url: str | None = None,
+) -> SurtBrowseResult:
+    """Browse the index's SURT host tree one level at a time.
+
+    Parameters
+    ----------
+    pattern : str
+        Pattern to expand; ``''`` (default) is the root level. Children
+        returned by a previous call can be passed back in to descend one
+        more level.
+    limit : int
+        Maximum number of children to return (1-200, default 50).
+    offset : int
+        Children to skip before applying ``limit`` (default 0).
+    cdx_url : str | None
+        Override the CDX server base URL. The ``/cdx-index/surt-browse``
+        path is appended to the base. Falls back to config file, then
+        environment variable ``CDX_URL``, then hard-coded default.
+
+    Returns
+    -------
+    SurtBrowseResult
+    """
+    if cdx_url is None:
+        cdx_url = _resolve(
+            "cdx-url",
+            default=CDX_URL,
+            env_var="CDX_URL",
+        )
+    browse_url = _cdx_base(cdx_url) + "/cdx-index/surt-browse"
+    params = {"pattern": pattern, "limit": limit, "offset": offset}
+    logger.debug("Requesting %s with params %s", browse_url, params)
+
+    data = retry_with_backoff(lambda: requests.get(browse_url, params=params, timeout=30)).json()
+    return SurtBrowseResult(
+        pattern=data["pattern"],
+        count=data["count"],
+        total_entries=data["total_entries"],
+        children=data["children"],
+        total_children=data["total_children"],
+        offset=data.get("offset", offset),
+        limit=data.get("limit", limit),
+        next_offset=data.get("next_offset"),
+    )
+
+
+def surt_prefix(
+    prefix: str,
+    *,
+    limit: int = 10,
+    cdx_url: str | None = None,
+) -> SurtScanResult:
+    """Wildcard search: find capture records under a SURT prefix.
+
+    Parameters
+    ----------
+    prefix : str
+        SURT string to scan, e.g. ``com,aa`` (host + subdomains) or
+        ``com,aaa,ace)/activities`` (path prefix of ace.aaa.com).
+    limit : int
+        Maximum number of results to return (1-100, default 10).
+    cdx_url : str | None
+        Override the CDX server base URL. The ``/cdx-index/surt-prefix``
+        path is appended to the base. Falls back to config file, then
+        environment variable ``CDX_URL``, then hard-coded default.
+
+    Returns
+    -------
+    SurtScanResult
+        Results in key order (SURT, then timestamp). ``total_results`` is
+        the number returned, not a true total.
+    """
+    if cdx_url is None:
+        cdx_url = _resolve(
+            "cdx-url",
+            default=CDX_URL,
+            env_var="CDX_URL",
+        )
+    scan_url = _cdx_base(cdx_url) + "/cdx-index/surt-prefix"
+    params = {"prefix": prefix, "limit": limit}
+    logger.debug("Requesting %s with params %s", scan_url, params)
+
+    data = retry_with_backoff(lambda: requests.get(scan_url, params=params, timeout=30)).json()
+    return SurtScanResult(
+        surt_prefix=data["surt_prefix"],
+        total_results=data["total_results"],
+        limit=data["limit"],
+        results=[_entry_from_dict(r) for r in data.get("results", [])],
     )
 
 
