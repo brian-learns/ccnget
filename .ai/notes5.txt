@@ -1,7 +1,0 @@
-The upstream API https://brian-learns-cc-news-cdx-server.hf.space/openapi.json has added a query parameter "at"
-
-Please add a `--at` parameter to the `ccnget lookup` and `ccnget fetch` sub-commands
-
-source: src/ccnget/geturl.py
-run: uv run ccnget ...
-test: make test
