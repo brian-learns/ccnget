@@ -20,6 +20,8 @@ from ccnget.api import extent as api_extent
 from ccnget.api import fetch as api_fetch
 from ccnget.api import lookup as api_lookup
 from ccnget.api import retrieve as api_retrieve
+from ccnget.api import surt_browse as api_surt_browse
+from ccnget.api import surt_prefix as api_surt_prefix
 from ccnget.config import (
     get_config,
     list_config,
@@ -44,6 +46,32 @@ def limited_int(val_str: str) -> int:
 
     if not (1 <= val <= 100):
         raise argparse.ArgumentTypeError("Value must be between 1 and 100")
+    return val
+
+
+def browse_limit(val_str: str) -> int:
+    """Checks that input is an integer between 1 and 200 (surt-browse page size)."""
+    try:
+        val = int(val_str)
+    except ValueError:
+        # Add 'from None' to satisfy Ruff B904 and hide the ValueError traceback
+        raise argparse.ArgumentTypeError("Must be an integer") from None
+
+    if not (1 <= val <= 200):
+        raise argparse.ArgumentTypeError("Value must be between 1 and 200")
+    return val
+
+
+def non_negative_int(val_str: str) -> int:
+    """Checks that input is an integer of 0 or greater."""
+    try:
+        val = int(val_str)
+    except ValueError:
+        # Add 'from None' to satisfy Ruff B904 and hide the ValueError traceback
+        raise argparse.ArgumentTypeError("Must be an integer") from None
+
+    if val < 0:
+        raise argparse.ArgumentTypeError("Value must be 0 or greater")
     return val
 
 
@@ -234,6 +262,35 @@ def get_parser() -> argparse.ArgumentParser:
     # extent subcommand (show index statistics)
     subparsers.add_parser("extent", help="Show what content is indexed on the server")
 
+    # surt-browse subcommand (browse the SURT host tree one level at a time)
+    surt_browse_parser = subparsers.add_parser("surt-browse", help="Browse hosts indexed on the server")
+    surt_browse_parser.add_argument(
+        "pattern",
+        nargs="?",
+        default="",
+        help="Pattern to expand (default: root level). Use a child pattern from a previous result to go deeper.",
+    )
+    surt_browse_parser.add_argument(
+        "--limit",
+        type=browse_limit,
+        default=50,
+        help="Maximum number of children to return (1-200, default: 50)",
+    )
+    surt_browse_parser.add_argument(
+        "--offset",
+        type=non_negative_int,
+        default=0,
+        help="Children to skip before applying limit (default: 0)",
+    )
+
+    # surt-prefix subcommand (wildcard search of captures under a SURT prefix)
+    surt_prefix_parser = subparsers.add_parser("surt-prefix", help="Prefix search surts indexed on the server")
+    surt_prefix_parser.add_argument(
+        "prefix",
+        help="SURT prefix to scan, e.g. com,aa or com,aaa,ace)/activities",
+    )
+    surt_prefix_parser.add_argument("--limit", type=limited_int, default=10, help="Limit value (1-100, default: 10)")
+
     return parser
 
 
@@ -241,6 +298,52 @@ def extent_cmd(args: argparse.Namespace) -> None:
     """Execute the extent subcommand."""
     result = api_extent()
     print(json.dumps(result.__dict__, indent=2))
+
+
+def surt_browse_cmd(args: argparse.Namespace) -> None:
+    """Execute the surt-browse subcommand."""
+    try:
+        result = api_surt_browse(
+            args.pattern,
+            limit=args.limit,
+            offset=args.offset,
+        )
+    except _requests.exceptions.RequestException as exc:
+        print(f"ccnget: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    print(json.dumps(result.__dict__, indent=2))
+
+
+def surt_prefix_cmd(args: argparse.Namespace) -> None:
+    """Execute the surt-prefix subcommand."""
+    try:
+        result = api_surt_prefix(
+            args.prefix,
+            limit=args.limit,
+        )
+    except _requests.exceptions.RequestException as exc:
+        print(f"ccnget: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    # Build a JSON-serialisable dict in the lookup output style
+    output = {
+        "surt_prefix": result.surt_prefix,
+        "total_results": result.total_results,
+        "limit": result.limit,
+        "results": [
+            {
+                "surt_key": e.surt_key,
+                "timestamp": e.timestamp,
+                "warc_path": e.warc_path,
+                "offset": e.offset,
+                "length": e.length,
+                **e.extra,
+            }
+            for e in result.results
+        ],
+    }
+    print(json.dumps(output, indent=2))
 
 
 def main(argv: Optional[list[str]] = None) -> None:
@@ -267,6 +370,10 @@ def main(argv: Optional[list[str]] = None) -> None:
         config_cmd(args)
     elif args.command == "extent":
         extent_cmd(args)
+    elif args.command == "surt-browse":
+        surt_browse_cmd(args)
+    elif args.command == "surt-prefix":
+        surt_prefix_cmd(args)
 
 
 # main() idiom for importing into REPL for debugging

@@ -1,14 +1,23 @@
-.TH CCNGET "1" "2026\-08\-18" "ccnget 0.1.7" "Generated Python Manual"
+.TH CCNGET "1" "2026\-08\-18" "ccnget 0.1.8.dev0" "Generated Python Manual"
 .SH NAME
 ccnget
 .SH SYNOPSIS
 .B ccnget
-[-h] [--loglevel LOGLEVEL] [-v] {lookup,retrieve,fetch,config,extent} ...
+[-h] [--loglevel LOGLEVEL] [-v] ...
 .SH DESCRIPTION
 lookup urls and get files from Common Crawl News
 
+.SH OPTIONS
+.TP
+\fB\-\-loglevel\fR \fI\,LOGLEVEL\/\fR
+CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is WARNING
+
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+show program's version number and exit
+
 .SH
-POSITIONAL ARGUMENTS
+SUBCOMMANDS
 .TP
 \fBccnget\fR \fI\,lookup\/\fR
 Lookup URLs in CC\-NEWS index
@@ -24,6 +33,12 @@ Manage persistent settings
 .TP
 \fBccnget\fR \fI\,extent\/\fR
 Show what content is indexed on the server
+.TP
+\fBccnget\fR \fI\,surt\-browse\/\fR
+Browse hosts indexed on the server
+.TP
+\fBccnget\fR \fI\,surt\-prefix\/\fR
+Prefix search surts indexed on the server
 
 .SH COMMAND \fI\,'ccnget lookup'\/\fR
 usage: ccnget lookup [\-h] [\-\-exact] [\-\-at AT] [\-\-limit LIMIT] url
@@ -129,14 +144,34 @@ usage: ccnget config unset [\-h] {cdx\-url,cc\-crawl\-base\-url}
 .SH COMMAND \fI\,'ccnget extent'\/\fR
 usage: ccnget extent [\-h]
 
-.SH OPTIONS
-.TP
-\fB\-\-loglevel\fR \fI\,LOGLEVEL\/\fR
-CRITICAL ERROR WARNING INFO DEBUG NOTSET, default is WARNING
+.SH COMMAND \fI\,'ccnget surt\-browse'\/\fR
+usage: ccnget surt\-browse [\-h] [\-\-limit LIMIT] [\-\-offset OFFSET] [pattern]
 
 .TP
-\fB\-v\fR, \fB\-\-version\fR
-show program's version number and exit
+\fBpattern\fR
+Pattern to expand (default: root level). Use a child pattern from a previous
+result to go deeper.
+
+.SH OPTIONS \fI\,'ccnget surt\-browse'\/\fR
+.TP
+\fB\-\-limit\fR \fI\,LIMIT\/\fR
+Maximum number of children to return (1\-200, default: 50)
+
+.TP
+\fB\-\-offset\fR \fI\,OFFSET\/\fR
+Children to skip before applying limit (default: 0)
+
+.SH COMMAND \fI\,'ccnget surt\-prefix'\/\fR
+usage: ccnget surt\-prefix [\-h] [\-\-limit LIMIT] prefix
+
+.TP
+\fBprefix\fR
+SURT prefix to scan, e.g. com,aa or com,aaa,ace)/activities
+
+.SH OPTIONS \fI\,'ccnget surt\-prefix'\/\fR
+.TP
+\fB\-\-limit\fR \fI\,LIMIT\/\fR
+Limit value (1\-100, default: 10)
 .SH ENVIRONMENT
 .TP
 .BI CDX_URL

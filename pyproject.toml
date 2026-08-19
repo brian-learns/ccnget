@@ -1,6 +1,6 @@
 [project]
 name = "ccnget"
-version = "0.1.7"
+version = "0.1.8-dev"
 description = "lookup urls and get files from Common Crawl News"
 readme = "README.md"
 authors = [
@@ -30,6 +30,7 @@ dev = [
     "pytest>=9.1.1",
     "refurb>=2.3.1",
     "ruff>=0.16.1",
+    "sphinx>=9.1.0",
     "ty>=0.0.70",
     "vulture>=2.16",
 ]
