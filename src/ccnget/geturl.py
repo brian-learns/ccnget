@@ -180,7 +180,12 @@ def get_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {get_version()}")
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(
+        title="subcommands",
+        metavar="",
+        dest="command",
+        required=True,
+    )
 
     # lookup subcommand
     lookup_parser = subparsers.add_parser("lookup", help="Lookup URLs in CC-NEWS index")
