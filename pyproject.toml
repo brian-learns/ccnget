@@ -1,6 +1,6 @@
 [project]
 name = "ccnget"
-version = "0.1.8-dev"
+version = "0.1.8"
 description = "lookup urls and get files from Common Crawl News"
 readme = "README.md"
 authors = [
@@ -34,10 +34,6 @@ dev = [
     "ty>=0.0.70",
     "vulture>=2.16",
 ]
-
-[tool.pydoc-markdown.renderer]
-type = "markdown"
-filename = "api.md"
 
 [tool.build_manpages]
 manpages = [
@@ -73,3 +69,6 @@ ignore-module = true
 
 [tool.ty]
 rules = { all = "error" }
+
+[tool.uv]
+exclude-newer = "7 days"
