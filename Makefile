@@ -5,12 +5,14 @@ REQUIRED_EXECUTABLES = uv rm find
 all: help
 
 help:
-	@echo ""
-	@echo "  make check      Run ultra-fast static testing pipeline (ruff, bandit, vulture, etc.)"
-	@echo "  make test       Run static checks followed immediately by pytest"
-	@echo "  make clean      Wipe out test tool cache tracking footprints"
-	@echo "  make init       Initialize new project with uv and test setup"
-	@echo "  make mandoc     Create man page TODO: make nice python api doc"
+	@echo "  make check             Run ultra-fast static testing pipeline (ruff, bandit, vulture, etc.)"
+	@echo "  make test              Run static checks followed immediately by pytest"
+	@echo "  make clean             Wipe out test tool cache tracking footprints"
+	@echo "  make init              Initialize new project with uv and test setup"
+	@echo "  make mandoc            Create man page TODO: make nice python api doc"
+	@echo "  make dev-cycle-start"
+	@echo "  make prerelease"
+
 
 check:
 	@echo "\n— [An extremely fast Python linter and code formatter](https://docs.astral.sh/ruff/)"
@@ -95,12 +97,12 @@ dev-cycle-start:
 	@echo "--- Git checks passed. Bumping to dev version ---"
 	uv version --bump minor --bump dev
 	uv lock --upgrade
-	$(MAKE) test
+	$(MAKE) test mandoc
 	@echo "Success! Commit these changes to start your new cycle."
 	uv version
 
 
-prerelease: check test
+prerelease: check test mandoc
 	@echo "--- Performing deep pre-release verification ---"
 	@git diff-index --quiet HEAD -- || (echo "Error: Uncommitted changes present!"; exit 1)
 	uv lock --check
