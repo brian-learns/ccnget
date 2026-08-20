@@ -7,13 +7,22 @@ Search over 1.4 Billion archived news URLs from CC-NEWS and retrieve contents fr
 ## Quickstart
 Running the command
 ```bash
-uvx --from git+https://github.com/brian-learns/ccnget ccnget fetch http://example.com/ | uvx trafilatura
+uvx --from git+https://github.com/brian-learns/ccnget ccnget fetch http://example.com/
 ```
-will lookup `http://example.com/` in an index; get the WARC file, offset, and size; get the archived web page from S3; then extract some text with [`trafilatura`](https://github.com/adbar/trafilatura) -- resulting in:
+will lookup `http://example.com/` in an index; get the WARC file, offset, and size; get the archived web page from S3; then extract the article with [`trafilatura`](https://github.com/adbar/trafilatura) and print it as **YAML frontmatter + markdown** -- resulting in:
 ```
+---
+url: http://example.com/
+date: 2024-06-30
+title: Example Domain
+language: English
+hostname: example.com
+---
 This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.
 More information...
 ```
+Add `--json` for structured output, `--select body` for markdown only, or `--raw` for the raw HTML bytes. See [Output Modes](#output-modes) and [Fetch](#fetch) for the full set.
+
 Or use as a library, as [demonstrated in this google colab](https://colab.research.google.com/drive/1DiZBPQGjcyudrpCIhh1goaFVpOvmVp6d?usp=sharing)
 
 ## Background
@@ -90,11 +99,46 @@ uv run ccnget retrieve \
 
 ### Fetch
 
-Lookup and retrieve the first result in one step:
+Lookup and fetch the first archived result in one step. By default the
+page is extracted with trafilatura (with an automatic 3-level fallback)
+and printed as **YAML frontmatter + markdown** — the human default:
 
 ```bash
-uv run ccnget fetch "http://example.com" -o article.html
+uv run ccnget fetch "http://example.com"
 ```
+
+```
+---
+url: http://example.com/
+date: 2024-06-30
+title: Example Domain
+language: English
+hostname: example.com
+---
+This domain is for use in illustrative examples in documents...
+```
+
+Pipe it straight to a file: `uv run ccnget fetch URL > article.md`.
+
+Agent / machine options:
+
+```bash
+uv run ccnget fetch URL --json                        # structured JSON (metadata + body)
+uv run ccnget fetch URL --compact                     # minified single-line JSON
+uv run ccnget fetch URL --select metadata.title       # pluck one field
+uv run ccnget fetch URL --select metadata             # whole metadata object
+uv run ccnget fetch URL --select body                 # markdown body only
+uv run ccnget fetch URL --quiet                       # metadata only, no body
+uv run ccnget fetch URL --mode brief                  # first paragraph only
+uv run ccnget fetch URL --raw                         # raw payload bytes (previous default)
+uv run ccnget fetch URL --raw -o page.html            # raw bytes to a file
+```
+
+`--select` uses the same dot-notation as the other subcommands and
+addresses the JSON shape: `url`, `surt_key`, `timestamp`, `warc_path`,
+`fallback_level`, `metadata.*`, `body`. `--raw` writes raw bytes and
+ignores the other output flags. When nothing readable can be extracted,
+the command exits 5 and points you at `--raw`.
 
 ### Extent
 
@@ -156,8 +200,8 @@ A bare name addresses a top-level field; `results.0.field` indexes a
 specific entry; a bare field name after a list maps over every entry and
 returns a JSON array.
 
-`fetch` and `retrieve` always write raw page/WARC bytes to stdout (or
-`-o FILE`) and are unaffected by these flags.
+`fetch` writes the extracted article (or `--raw` bytes) to stdout or
+`-o FILE`.
 
 ### Exit Codes
 

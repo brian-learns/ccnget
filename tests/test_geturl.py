@@ -63,6 +63,15 @@ from ccnget.output import (
 # Output flags for direct *_cmd() calls (main-level tests cover the full parser)
 _OUTPUT_ARGS = {"json_flag": False, "compact": False, "table_flag": False, "select": None}
 
+# fetch output flags (fetch has no --table; raw is set per-test)
+_FETCH_ARGS = {
+    "mode": "full",
+    "quiet": False,
+    "json_flag": False,
+    "compact": False,
+    "select": None,
+}
+
 
 def _make_warc_response(payload: bytes) -> bytes:
     """Create a minimal WARC record with the given payload."""
@@ -295,7 +304,7 @@ class TestFetchCmd:
 
         mock_get.side_effect = [lookup_response, retrieve_response]
 
-        args = argparse.Namespace(url="http://example.com", exact=False, output=None, at=None)
+        args = argparse.Namespace(url="http://example.com", exact=False, output=None, at=None, raw=True, **_FETCH_ARGS)
         fetch_cmd(args)
 
         captured = capsys.readouterr()
@@ -323,7 +332,9 @@ class TestFetchCmd:
 
         mock_get.side_effect = [lookup_response, retrieve_response]
 
-        args = argparse.Namespace(url="http://example.com", exact=False, output=None, at="20240101120000")
+        args = argparse.Namespace(
+            url="http://example.com", exact=False, output=None, at="20240101120000", raw=False, **_FETCH_ARGS
+        )
         fetch_cmd(args)
 
         call_args = mock_get.call_args_list[0]
@@ -351,7 +362,9 @@ class TestFetchCmd:
         mock_get.side_effect = [lookup_response, retrieve_response]
 
         output_file = tmp_path / "fetched.html"
-        args = argparse.Namespace(url="http://example.com", exact=True, output=str(output_file), at=None)
+        args = argparse.Namespace(
+            url="http://example.com", exact=True, output=str(output_file), at=None, raw=True, **_FETCH_ARGS
+        )
         fetch_cmd(args)
 
         assert output_file.exists()
@@ -363,7 +376,9 @@ class TestFetchCmd:
         lookup_response.json.return_value = {"results": []}
         mock_get.return_value = lookup_response
 
-        args = argparse.Namespace(url="http://nonexistent.example", exact=False, output=None, at=None)
+        args = argparse.Namespace(
+            url="http://nonexistent.example", exact=False, output=None, at=None, raw=False, **_FETCH_ARGS
+        )
         with pytest.raises(SystemExit) as exc_info:
             fetch_cmd(args)
         assert exc_info.value.code == EXIT_NOT_FOUND

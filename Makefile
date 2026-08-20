@@ -59,7 +59,7 @@ testpackages:
 #mandoc: man doc
 mandoc: man
 
-man:
+man: man/ccnget.1
 	mkdir -p man
 	uv run argparse-manpage \
 		--module ccnget.geturl \
@@ -104,7 +104,14 @@ dev-cycle-start:
 
 prerelease: check test mandoc
 	@echo "--- Performing deep pre-release verification ---"
-	@git diff-index --quiet HEAD -- || (echo "Error: Uncommitted changes present!"; exit 1)
+		# Force refresh the index cache first
+	@git update-index --refresh --quiet || true
+	# Check if porcelain status yields any output. Fail if it does.
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "Error: Uncommitted changes present!"; \
+		git status --short; \
+		exit 1; \
+	fi
 	uv lock --check
 	uv build
 	uv version

@@ -26,7 +26,7 @@ Lookup URLs in CC\-NEWS index
 Retrieve WARC records from Common Crawl
 .TP
 \fBccnget\fR \fI\,fetch\/\fR
-Lookup and retrieve the first result
+Lookup and fetch the first result as an article (YAML frontmatter + markdown)
 .TP
 \fBccnget\fR \fI\,config\/\fR
 Manage persistent settings
@@ -101,7 +101,10 @@ Byte length of record
 Output file path (default: stdout)
 
 .SH COMMAND \fI\,'ccnget fetch'\/\fR
-usage: ccnget fetch [\-h] [\-\-exact] [\-\-at AT] [\-\-output OUTPUT] url
+usage: ccnget fetch [\-h] [\-\-exact] [\-\-at AT] [\-\-mode {full,brief}] [\-\-quiet]
+                    [\-\-raw] [\-\-output OUTPUT] [\-\-json] [\-\-compact]
+                    [\-\-select PATH]
+                    url
 
 .TP
 \fBurl\fR
@@ -116,8 +119,34 @@ Timestamp (YYYYMMDDhhmmss). Seeks from timestamp if exact=True, finds closest
 match if exact=False.
 
 .TP
+\fB\-\-mode\fR \fI\,{full,brief}\/\fR, \fB\-m\fR \fI\,{full,brief}\/\fR
+'full' = complete article, 'brief' = first paragraph (default: full)
+
+.TP
+\fB\-\-quiet\fR, \fB\-q\fR
+Metadata only, no article body
+
+.TP
+\fB\-\-raw\fR
+Write the raw payload bytes (previous default)
+
+.TP
 \fB\-\-output\fR \fI\,OUTPUT\/\fR, \fB\-o\fR \fI\,OUTPUT\/\fR
 Output file path (default: stdout)
+
+.SH OUTPUT FLAGS \fI\,'ccnget fetch'\/\fR
+.TP
+\fB\-\-json\fR
+Pretty\-printed JSON output
+
+.TP
+\fB\-\-compact\fR
+Minified single\-line JSON output
+
+.TP
+\fB\-\-select\fR \fI\,PATH\/\fR
+Extract a value with dot notation and print it raw: results.0.warc_path,
+results.warc_path (maps over the list), or a top\-level field like url
 
 .SH COMMAND \fI\,'ccnget config'\/\fR
 usage: ccnget config [\-h] {set,get,show,unset} ...
