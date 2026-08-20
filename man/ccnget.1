@@ -41,7 +41,9 @@ Browse hosts indexed on the server
 Prefix search surts indexed on the server
 
 .SH COMMAND \fI\,'ccnget lookup'\/\fR
-usage: ccnget lookup [\-h] [\-\-exact] [\-\-at AT] [\-\-limit LIMIT] url
+usage: ccnget lookup [\-h] [\-\-exact] [\-\-at AT] [\-\-limit LIMIT] [\-\-json]
+                     [\-\-compact] [\-\-table] [\-\-select PATH]
+                     url
 
 .TP
 \fBurl\fR
@@ -58,6 +60,24 @@ match if exact=False.
 .TP
 \fB\-\-limit\fR \fI\,LIMIT\/\fR
 Limit value (1\-100, default: 10)
+
+.SH OUTPUT FLAGS \fI\,'ccnget lookup'\/\fR
+.TP
+\fB\-\-json\fR
+Pretty\-printed JSON output
+
+.TP
+\fB\-\-compact\fR
+Minified single\-line JSON output
+
+.TP
+\fB\-\-table\fR
+Force the human table view
+
+.TP
+\fB\-\-select\fR \fI\,PATH\/\fR
+Extract a value with dot notation and print it raw: results.0.warc_path,
+results.warc_path (maps over the list), or a top\-level field like url
 
 .SH COMMAND \fI\,'ccnget retrieve'\/\fR
 usage: ccnget retrieve [\-h] \-\-warc\-path WARC_PATH \-\-offset OFFSET
@@ -142,10 +162,30 @@ usage: ccnget config unset [\-h] {cdx\-url,cc\-crawl\-base\-url}
 \fB{cdx\-url,cc\-crawl\-base\-url}\fR
 
 .SH COMMAND \fI\,'ccnget extent'\/\fR
-usage: ccnget extent [\-h]
+usage: ccnget extent [\-h] [\-\-json] [\-\-compact] [\-\-table] [\-\-select PATH]
+
+.SH OUTPUT FLAGS \fI\,'ccnget extent'\/\fR
+.TP
+\fB\-\-json\fR
+Pretty\-printed JSON output
+
+.TP
+\fB\-\-compact\fR
+Minified single\-line JSON output
+
+.TP
+\fB\-\-table\fR
+Force the human table view
+
+.TP
+\fB\-\-select\fR \fI\,PATH\/\fR
+Extract a value with dot notation and print it raw: results.0.warc_path,
+results.warc_path (maps over the list), or a top\-level field like url
 
 .SH COMMAND \fI\,'ccnget surt\-browse'\/\fR
-usage: ccnget surt\-browse [\-h] [\-\-limit LIMIT] [\-\-offset OFFSET] [pattern]
+usage: ccnget surt\-browse [\-h] [\-\-limit LIMIT] [\-\-offset OFFSET] [\-\-json]
+                          [\-\-compact] [\-\-table] [\-\-select PATH]
+                          [pattern]
 
 .TP
 \fBpattern\fR
@@ -161,8 +201,28 @@ Maximum number of children to return (1\-200, default: 50)
 \fB\-\-offset\fR \fI\,OFFSET\/\fR
 Children to skip before applying limit (default: 0)
 
+.SH OUTPUT FLAGS \fI\,'ccnget surt\-browse'\/\fR
+.TP
+\fB\-\-json\fR
+Pretty\-printed JSON output
+
+.TP
+\fB\-\-compact\fR
+Minified single\-line JSON output
+
+.TP
+\fB\-\-table\fR
+Force the human table view
+
+.TP
+\fB\-\-select\fR \fI\,PATH\/\fR
+Extract a value with dot notation and print it raw: results.0.warc_path,
+results.warc_path (maps over the list), or a top\-level field like url
+
 .SH COMMAND \fI\,'ccnget surt\-prefix'\/\fR
-usage: ccnget surt\-prefix [\-h] [\-\-limit LIMIT] prefix
+usage: ccnget surt\-prefix [\-h] [\-\-limit LIMIT] [\-\-json] [\-\-compact] [\-\-table]
+                          [\-\-select PATH]
+                          prefix
 
 .TP
 \fBprefix\fR
@@ -172,6 +232,24 @@ SURT prefix to scan, e.g. com,aa or com,aaa,ace)/activities
 .TP
 \fB\-\-limit\fR \fI\,LIMIT\/\fR
 Limit value (1\-100, default: 10)
+
+.SH OUTPUT FLAGS \fI\,'ccnget surt\-prefix'\/\fR
+.TP
+\fB\-\-json\fR
+Pretty\-printed JSON output
+
+.TP
+\fB\-\-compact\fR
+Minified single\-line JSON output
+
+.TP
+\fB\-\-table\fR
+Force the human table view
+
+.TP
+\fB\-\-select\fR \fI\,PATH\/\fR
+Extract a value with dot notation and print it raw: results.0.warc_path,
+results.warc_path (maps over the list), or a top\-level field like url
 .SH ENVIRONMENT
 .TP
 .BI CDX_URL

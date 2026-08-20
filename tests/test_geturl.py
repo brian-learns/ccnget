@@ -48,6 +48,20 @@ from ccnget.geturl import (
     surt_browse_cmd,
     surt_prefix_cmd,
 )
+from ccnget.output import (
+    EXIT_API,
+    EXIT_NOT_FOUND,
+    EXIT_OK,
+    EXIT_USAGE,
+    SelectError,
+    apply_select,
+    emit,
+    fail,
+)
+
+
+# Output flags for direct *_cmd() calls (main-level tests cover the full parser)
+_OUTPUT_ARGS = {"json_flag": False, "compact": False, "table_flag": False, "select": None}
 
 
 def _make_warc_response(payload: bytes) -> bytes:
@@ -123,17 +137,28 @@ class TestMainParsing:
     def test_missing_command_fails(self):
         with pytest.raises(SystemExit) as exc_info:
             main([])
-        assert exc_info.value.code != 0
+        assert exc_info.value.code == EXIT_USAGE
 
     def test_lookup_missing_url_fails(self):
         with pytest.raises(SystemExit) as exc_info:
             main(["lookup"])
-        assert exc_info.value.code != 0
+        assert exc_info.value.code == EXIT_USAGE
 
     def test_retrieve_missing_required_fails(self):
         with pytest.raises(SystemExit) as exc_info:
             main(["retrieve"])
-        assert exc_info.value.code != 0
+        assert exc_info.value.code == EXIT_USAGE
+
+    @patch("ccnget.api.requests.get")
+    def test_bad_select_path_fails(self, mock_get, capsys):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"results": []}
+        mock_get.return_value = mock_response
+
+        with pytest.raises(SystemExit) as exc_info:
+            main(["lookup", "http://example.com", "--select", "nope.nope"])
+        assert exc_info.value.code == EXIT_USAGE
+        assert "selector" in capsys.readouterr().err
 
 
 # ── CLI command tests ─────────────────────────────────────────────────────
@@ -148,7 +173,7 @@ class TestLookupCmd:
         mock_get.return_value = mock_response
         mock_resolve.return_value = "https://brian-learns-cc-news-cdx-server.hf.space/"
 
-        args = argparse.Namespace(url="http://example.com", exact=False, limit=10, at=None)
+        args = argparse.Namespace(url="http://example.com", exact=False, limit=10, at=None, **_OUTPUT_ARGS)
         lookup_cmd(args)
 
         mock_get.assert_called_once()
@@ -165,7 +190,7 @@ class TestLookupCmd:
         mock_response.json.return_value = {"results": []}
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(url="http://example.com", exact=True, limit=5, at=None)
+        args = argparse.Namespace(url="http://example.com", exact=True, limit=5, at=None, **_OUTPUT_ARGS)
         lookup_cmd(args)
 
         call_args = mock_get.call_args
@@ -177,7 +202,9 @@ class TestLookupCmd:
         mock_response.json.return_value = {"results": []}
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(url="http://example.com", exact=False, limit=10, at="20240101120000")
+        args = argparse.Namespace(
+            url="http://example.com", exact=False, limit=10, at="20240101120000", **_OUTPUT_ARGS
+        )
         lookup_cmd(args)
 
         call_args = mock_get.call_args
@@ -337,9 +364,9 @@ class TestFetchCmd:
         mock_get.return_value = lookup_response
 
         args = argparse.Namespace(url="http://nonexistent.example", exact=False, output=None, at=None)
-        with pytest.raises(SystemExit):
+        with pytest.raises(SystemExit) as exc_info:
             fetch_cmd(args)
-
+        assert exc_info.value.code == EXIT_NOT_FOUND
         assert mock_get.call_count == 1
         captured = capsys.readouterr()
         assert "no match for http://nonexistent.example" in captured.err
@@ -893,7 +920,7 @@ class TestSurtBrowseCmd:
         }
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(pattern="", limit=50, offset=0)
+        args = argparse.Namespace(pattern="", limit=50, offset=0, **_OUTPUT_ARGS)
         surt_browse_cmd(args)
 
         captured = capsys.readouterr()
@@ -917,7 +944,7 @@ class TestSurtBrowseCmd:
         }
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(pattern="com,aa", limit=20, offset=50)
+        args = argparse.Namespace(pattern="com,aa", limit=20, offset=50, **_OUTPUT_ARGS)
         surt_browse_cmd(args)
 
         captured = capsys.readouterr()
@@ -930,9 +957,10 @@ class TestSurtBrowseCmd:
         import requests
 
         mock_get.side_effect = requests.exceptions.ConnectionError("boom")
-        args = argparse.Namespace(pattern="", limit=50, offset=0)
-        with pytest.raises(SystemExit):
+        args = argparse.Namespace(pattern="", limit=50, offset=0, **_OUTPUT_ARGS)
+        with pytest.raises(SystemExit) as exc_info:
             surt_browse_cmd(args)
+        assert exc_info.value.code == EXIT_API
         assert "boom" in capsys.readouterr().err
 
 
@@ -956,7 +984,7 @@ class TestSurtPrefixCmd:
         }
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(prefix="com,aa", limit=10)
+        args = argparse.Namespace(prefix="com,aa", limit=10, **_OUTPUT_ARGS)
         surt_prefix_cmd(args)
 
         captured = capsys.readouterr()
@@ -978,7 +1006,7 @@ class TestSurtPrefixCmd:
         }
         mock_get.return_value = mock_response
 
-        args = argparse.Namespace(prefix="com,nomatch", limit=10)
+        args = argparse.Namespace(prefix="com,nomatch", limit=10, **_OUTPUT_ARGS)
         surt_prefix_cmd(args)
 
         out = json.loads(capsys.readouterr().out)
@@ -989,9 +1017,10 @@ class TestSurtPrefixCmd:
         import requests
 
         mock_get.side_effect = requests.exceptions.ConnectionError("boom")
-        args = argparse.Namespace(prefix="com,aa", limit=10)
-        with pytest.raises(SystemExit):
+        args = argparse.Namespace(prefix="com,aa", limit=10, **_OUTPUT_ARGS)
+        with pytest.raises(SystemExit) as exc_info:
             surt_prefix_cmd(args)
+        assert exc_info.value.code == EXIT_API
         assert "boom" in capsys.readouterr().err
 
 
@@ -1058,17 +1087,17 @@ class TestSurtCliParsing:
     def test_surt_prefix_missing_prefix_fails(self):
         with pytest.raises(SystemExit) as exc_info:
             main(["surt-prefix"])
-        assert exc_info.value.code != 0
+        assert exc_info.value.code == EXIT_USAGE
 
     def test_surt_browse_bad_limit_fails(self):
         with pytest.raises(SystemExit) as exc_info:
             main(["surt-browse", "--limit", "500"])
-        assert exc_info.value.code != 0
+        assert exc_info.value.code == EXIT_USAGE
 
     def test_surt_browse_negative_offset_fails(self):
         with pytest.raises(SystemExit) as exc_info:
             main(["surt-browse", "--offset", "-1"])
-        assert exc_info.value.code != 0
+        assert exc_info.value.code == EXIT_USAGE
 
 
 class TestExceptions:
