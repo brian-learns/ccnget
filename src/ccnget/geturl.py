@@ -7,6 +7,7 @@ human/agent output formatting.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from importlib.metadata import PackageNotFoundError, version
@@ -23,6 +24,8 @@ from ccnget.api import lookup as api_lookup
 from ccnget.api import retrieve as api_retrieve
 from ccnget.api import surt_browse as api_surt_browse
 from ccnget.api import surt_prefix as api_surt_prefix
+from ccnget.article import article as article_extract
+from ccnget.article import article_to_dict, article_to_text
 from ccnget.config import (
     get_config,
     list_config,
@@ -33,6 +36,7 @@ from ccnget.config import (
 from ccnget.output import (
     EXIT_API,
     EXIT_NOT_FOUND,
+    EXIT_OK,
     EXIT_USAGE,
     emit,
     fail,
@@ -98,17 +102,19 @@ def _entry_dict(e: LookupEntry) -> dict[str, Any]:
     }
 
 
-def _output_flags(parser: argparse.ArgumentParser) -> None:
+def _output_flags(parser: argparse.ArgumentParser, table: bool = True) -> None:
     """Add the shared output-mode flags to a subcommand parser.
 
     Default: Rich table on an interactive TTY, pretty JSON when piped.
     --json / --compact / --table override in either direction; --select
     plucks a single value via dot notation and wins over all of them.
+    ``table=False`` omits --table (subcommands with no table view).
     """
     group = parser.add_argument_group("output flags")
     group.add_argument("--json", dest="json_flag", action="store_true", help="Pretty-printed JSON output")
     group.add_argument("--compact", dest="compact", action="store_true", help="Minified single-line JSON output")
-    group.add_argument("--table", dest="table_flag", action="store_true", help="Force the human table view")
+    if table:
+        group.add_argument("--table", dest="table_flag", action="store_true", help="Force the human table view")
     group.add_argument(
         "--select",
         dest="select",
@@ -156,7 +162,7 @@ def _emit_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "json_flag": args.json_flag,
         "compact": args.compact,
-        "table_flag": args.table_flag,
+        "table_flag": getattr(args, "table_flag", False),
         "select": args.select,
     }
 
@@ -183,7 +189,64 @@ def retrieve_cmd(args: argparse.Namespace) -> int:
 
 
 def fetch_cmd(args: argparse.Namespace) -> int:
-    """Execute the fetch subcommand: lookup then retrieve the first result."""
+    """Execute the fetch subcommand.
+
+    Default: extract the first archived result as YAML frontmatter +
+    markdown (article view). --json/--compact give structured JSON,
+    --select plucks a field, --raw writes the raw payload bytes.
+    """
+    if args.raw:
+        return _fetch_raw(args)
+
+    try:
+        res = article_extract(
+            args.url,
+            exact=args.exact,
+            at=args.at,
+        )
+    except NotFoundError:
+        fail(f"no match for {args.url}", EXIT_NOT_FOUND, machine=_machine_mode(args))
+    except CcngetError as exc:
+        fail(f"no response record: {exc}", EXIT_NOT_FOUND, machine=_machine_mode(args))
+    except _requests.exceptions.RequestException as exc:
+        _handle_request_error(exc, args)
+
+    if res.fallback_level == 0:
+        fail(
+            f"no extractable text for {args.url} ({len(res.payload)} bytes); use --raw to get the raw payload",
+            EXIT_API,
+            machine=_machine_mode(args),
+        )
+
+    if args.select is not None:
+        data = article_to_dict(res, mode=args.mode)
+        return emit(data, _unused_renderer, select=args.select)
+
+    data = article_to_dict(res, mode=args.mode)
+    if args.quiet:
+        data = {k: v for k, v in data.items() if k != "body"}
+
+    if args.compact:
+        print(json.dumps(data, separators=(",", ":")))
+    elif args.json_flag:
+        print(json.dumps(data, indent=2))
+    else:
+        text = article_to_text(res, mode=args.mode, quiet=args.quiet)
+        if args.output:
+            Path(args.output).write_text(text)
+            logger.info("Wrote %d chars to %s", len(text), args.output)
+        else:
+            print(text)
+    return EXIT_OK
+
+
+def _unused_renderer(payload: dict[str, Any]) -> None:  # pragma: no cover
+    """Placeholder renderer; fetch has no table view."""
+    raise AssertionError("fetch has no table renderer")
+
+
+def _fetch_raw(args: argparse.Namespace) -> int:
+    """Fetch and write the raw payload bytes (previous fetch behaviour)."""
     try:
         result = api_fetch(
             args.url,
@@ -280,15 +343,28 @@ def get_parser() -> argparse.ArgumentParser:
     retrieve_parser.add_argument("--length", type=int, required=True, help="Byte length of record")
     retrieve_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
 
-    # fetch subcommand (lookup + retrieve first result)
-    fetch_parser = subparsers.add_parser("fetch", help="Lookup and retrieve the first result")
+    # fetch subcommand (lookup + retrieve + extract first result)
+    fetch_parser = subparsers.add_parser(
+        "fetch",
+        help="Lookup and fetch the first result as an article (YAML frontmatter + markdown)",
+    )
     fetch_parser.add_argument("url")
     fetch_parser.add_argument("--exact", action="store_true")
     fetch_parser.add_argument(
         "--at",
         help="Timestamp (YYYYMMDDhhmmss). Seeks from timestamp if exact=True, finds closest match if exact=False.",
     )
+    fetch_parser.add_argument(
+        "--mode",
+        "-m",
+        choices=["full", "brief"],
+        default="full",
+        help="'full' = complete article, 'brief' = first paragraph (default: full)",
+    )
+    fetch_parser.add_argument("--quiet", "-q", action="store_true", help="Metadata only, no article body")
+    fetch_parser.add_argument("--raw", action="store_true", help="Write the raw payload bytes (previous default)")
     fetch_parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
+    _output_flags(fetch_parser, table=False)
 
     # config subcommand (set/get/show/unset persistent settings)
     config_sub = subparsers.add_parser("config", help="Manage persistent settings").add_subparsers(

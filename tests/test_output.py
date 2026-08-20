@@ -253,7 +253,7 @@ class TestOutputFlagParsing:
             args = parser.parse_args(argv + ["--json"])
             assert args.json_flag is True, argv
 
-    def test_retrieve_and_fetch_have_no_output_flags(self):
+    def test_retrieve_has_no_output_flags(self):
         from ccnget.geturl import get_parser
 
         parser = get_parser()
@@ -261,8 +261,17 @@ class TestOutputFlagParsing:
             parser.parse_args(
                 ["retrieve", "--warc-path", "x", "--offset", "0", "--length", "1", "--json"]
             )
+
+    def test_fetch_has_output_flags_but_no_table(self):
+        from ccnget.geturl import get_parser
+
+        parser = get_parser()
+        args = parser.parse_args(["fetch", "http://x", "--json", "--compact", "--select", "body"])
+        assert args.json_flag is True
+        assert args.compact is True
+        assert args.select == "body"
         with pytest.raises(SystemExit):
-            parser.parse_args(["fetch", "http://x", "--json"])
+            parser.parse_args(["fetch", "http://x", "--table"])
 
 
 # CLI end-to-end output modes -----------------------------------------------------

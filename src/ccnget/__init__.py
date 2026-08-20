@@ -39,6 +39,7 @@ from ccnget.api import (
     surt_browse,
     surt_prefix,
 )
+from ccnget.article import ArticleResult, article
 from ccnget.config import (
     get_config,
     list_config,
@@ -48,6 +49,7 @@ from ccnget.config import (
 )
 
 __all__ = [
+    "ArticleResult",
     "CcngetError",
     "ExtentResult",
     "FetchResult",
@@ -57,6 +59,7 @@ __all__ = [
     "NotFoundError",
     "SurtBrowseResult",
     "SurtScanResult",
+    "article",
     "extent",
     "fetch",
     "get_config",
