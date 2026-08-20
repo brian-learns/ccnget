@@ -1,21 +1,22 @@
 """CLI entry-point for ccnget.
 
-Uses the library API (ccnget.api) for all logic.
+Uses the library API (ccnget.api) for all logic and ccnget.output for
+human/agent output formatting.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 from importlib.metadata import PackageNotFoundError, version
-from typing import Optional
+from pathlib import Path
+from typing import Any, NoReturn, Optional
 
 import requests as _requests
 from dotenv import load_dotenv
 
-from ccnget.api import NotFoundError
+from ccnget.api import CcngetError, LookupEntry, NotFoundError
 from ccnget.api import extent as api_extent
 from ccnget.api import fetch as api_fetch
 from ccnget.api import lookup as api_lookup
@@ -28,6 +29,16 @@ from ccnget.config import (
     set_config,
     show_config_path,
     unset_config,
+)
+from ccnget.output import (
+    EXIT_API,
+    EXIT_NOT_FOUND,
+    EXIT_USAGE,
+    emit,
+    fail,
+    render_extent,
+    render_lookup,
+    render_surt_browse,
 )
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -75,7 +86,51 @@ def non_negative_int(val_str: str) -> int:
     return val
 
 
-def lookup_cmd(args: argparse.Namespace) -> None:
+def _entry_dict(e: LookupEntry) -> dict[str, Any]:
+    """One capture entry as a JSON-serialisable dict (extra fields merged)."""
+    return {
+        "surt_key": e.surt_key,
+        "timestamp": e.timestamp,
+        "warc_path": e.warc_path,
+        "offset": e.offset,
+        "length": e.length,
+        **e.extra,
+    }
+
+
+def _output_flags(parser: argparse.ArgumentParser) -> None:
+    """Add the shared output-mode flags to a subcommand parser.
+
+    Default: Rich table on an interactive TTY, pretty JSON when piped.
+    --json / --compact / --table override in either direction; --select
+    plucks a single value via dot notation and wins over all of them.
+    """
+    group = parser.add_argument_group("output flags")
+    group.add_argument("--json", dest="json_flag", action="store_true", help="Pretty-printed JSON output")
+    group.add_argument("--compact", dest="compact", action="store_true", help="Minified single-line JSON output")
+    group.add_argument("--table", dest="table_flag", action="store_true", help="Force the human table view")
+    group.add_argument(
+        "--select",
+        dest="select",
+        metavar="PATH",
+        help=(
+            "Extract a value with dot notation and print it raw: "
+            "results.0.warc_path, results.warc_path (maps over the list), or a top-level field like url"
+        ),
+    )
+
+
+def _machine_mode(args: argparse.Namespace) -> bool:
+    """True when errors should be reported as a JSON object on stderr."""
+    return bool(args.json_flag or args.compact or args.select)
+
+
+def _handle_request_error(exc: Exception, args: argparse.Namespace) -> NoReturn:
+    """Report a transport/API failure with a typed exit code."""
+    fail(f"request failed: {exc}", EXIT_API, machine=_machine_mode(args))
+
+
+def lookup_cmd(args: argparse.Namespace) -> int:
     """Execute the lookup subcommand."""
     try:
         result = api_lookup(
@@ -85,51 +140,49 @@ def lookup_cmd(args: argparse.Namespace) -> None:
             at=args.at,
         )
     except NotFoundError:
-        print(
-            f"ccnget: no match for {args.url}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        fail(f"no match for {args.url}", EXIT_NOT_FOUND, machine=_machine_mode(args))
+    except CcngetError as exc:
+        fail(f"request failed: {exc}", EXIT_API, machine=_machine_mode(args))
     except _requests.exceptions.RequestException as exc:
-        print(f"ccnget: {exc}", file=sys.stderr)
-        sys.exit(1)
+        _handle_request_error(exc, args)
 
-    # Build a JSON-serialisable dict matching the old format
-    output = {
-        "url": result.url,
-        "results": [
-            {
-                "surt_key": e.surt_key,
-                "timestamp": e.timestamp,
-                "warc_path": e.warc_path,
-                "offset": e.offset,
-                "length": e.length,
-                **e.extra,
-            }
-            for e in result.entries
-        ],
+    output = {"url": result.url, "results": [_entry_dict(e) for e in result.entries]}
+    title = f"Captures for {result.url}"
+    return emit(output, lambda p: render_lookup(title, p), **_emit_kwargs(args))
+
+
+def _emit_kwargs(args: argparse.Namespace) -> dict[str, Any]:
+    """Collect the shared output flags from a parsed namespace."""
+    return {
+        "json_flag": args.json_flag,
+        "compact": args.compact,
+        "table_flag": args.table_flag,
+        "select": args.select,
     }
-    print(json.dumps(output, indent=2))
 
 
-def retrieve_cmd(args: argparse.Namespace) -> None:
+def retrieve_cmd(args: argparse.Namespace) -> int:
     """Execute the retrieve subcommand."""
-    result = api_retrieve(
-        args.warc_path,
-        args.offset,
-        args.length,
-    )
+    try:
+        result = api_retrieve(
+            args.warc_path,
+            args.offset,
+            args.length,
+        )
+    except CcngetError as exc:
+        fail(f"no response record: {exc}", EXIT_NOT_FOUND, machine=False)
+    except _requests.exceptions.RequestException as exc:
+        fail(f"request failed: {exc}", EXIT_API, machine=False)
 
     if args.output:
-        from pathlib import Path
-
         Path(args.output).write_bytes(result.payload)
         logger.info("Wrote %d bytes to %s", len(result.payload), args.output)
     else:
         sys.stdout.buffer.write(result.payload)
+    return 0
 
 
-def fetch_cmd(args: argparse.Namespace) -> None:
+def fetch_cmd(args: argparse.Namespace) -> int:
     """Execute the fetch subcommand: lookup then retrieve the first result."""
     try:
         result = api_fetch(
@@ -138,39 +191,33 @@ def fetch_cmd(args: argparse.Namespace) -> None:
             at=args.at,
         )
     except NotFoundError:
-        print(
-            f"ccnget: no match for {args.url}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        fail(f"no match for {args.url}", EXIT_NOT_FOUND, machine=False)
+    except CcngetError as exc:
+        fail(f"no response record: {exc}", EXIT_NOT_FOUND, machine=False)
     except _requests.exceptions.RequestException as exc:
-        print(f"ccnget: {exc}", file=sys.stderr)
-        sys.exit(1)
+        fail(f"request failed: {exc}", EXIT_API, machine=False)
 
     if args.output:
-        from pathlib import Path
-
         Path(args.output).write_bytes(result.payload)
         logger.info("Wrote %d bytes to %s", len(result.payload), args.output)
     else:
         sys.stdout.buffer.write(result.payload)
+    return 0
 
 
-def config_cmd(args: argparse.Namespace) -> None:
+def config_cmd(args: argparse.Namespace) -> int:
     """Execute the config subcommand (set/get/show/unset)."""
     if args.config_action == "set":
         try:
             set_config(args.key, args.value)
         except KeyError as e:
-            print(f"ccnget: {e}", file=sys.stderr)
-            sys.exit(1)
+            fail(f"config: {e}", EXIT_USAGE, machine=False)
         print(f"Set {args.key} = {args.value}")
 
     elif args.config_action == "get":
         val = get_config(args.key)
         if val is None:
-            print(f"ccnget: {args.key} is not set in config file", file=sys.stderr)
-            sys.exit(1)
+            fail(f"config: {args.key} is not set in config file", EXIT_USAGE, machine=False)
         print(val)
 
     elif args.config_action == "show":
@@ -185,9 +232,9 @@ def config_cmd(args: argparse.Namespace) -> None:
         try:
             unset_config(args.key)
         except KeyError as e:
-            print(f"ccnget: {e}", file=sys.stderr)
-            sys.exit(1)
+            fail(f"config: {e}", EXIT_USAGE, machine=False)
         print(f"Unset {args.key}")
+    return 0
 
 
 def get_version() -> str:
@@ -224,6 +271,7 @@ def get_parser() -> argparse.ArgumentParser:
         help="Timestamp (YYYYMMDDhhmmss). Seeks from timestamp if exact=True, finds closest match if exact=False.",
     )
     lookup_parser.add_argument("--limit", type=limited_int, default=10, help="Limit value (1-100, default: 10)")
+    _output_flags(lookup_parser)
 
     # retrieve subcommand
     retrieve_parser = subparsers.add_parser("retrieve", help="Retrieve WARC records from Common Crawl")
@@ -260,7 +308,8 @@ def get_parser() -> argparse.ArgumentParser:
     unset_p.add_argument("key", choices=["cdx-url", "cc-crawl-base-url"])
 
     # extent subcommand (show index statistics)
-    subparsers.add_parser("extent", help="Show what content is indexed on the server")
+    extent_parser = subparsers.add_parser("extent", help="Show what content is indexed on the server")
+    _output_flags(extent_parser)
 
     # surt-browse subcommand (browse the SURT host tree one level at a time)
     surt_browse_parser = subparsers.add_parser("surt-browse", help="Browse hosts indexed on the server")
@@ -282,6 +331,7 @@ def get_parser() -> argparse.ArgumentParser:
         default=0,
         help="Children to skip before applying limit (default: 0)",
     )
+    _output_flags(surt_browse_parser)
 
     # surt-prefix subcommand (wildcard search of captures under a SURT prefix)
     surt_prefix_parser = subparsers.add_parser("surt-prefix", help="Prefix search surts indexed on the server")
@@ -290,17 +340,24 @@ def get_parser() -> argparse.ArgumentParser:
         help="SURT prefix to scan, e.g. com,aa or com,aaa,ace)/activities",
     )
     surt_prefix_parser.add_argument("--limit", type=limited_int, default=10, help="Limit value (1-100, default: 10)")
+    _output_flags(surt_prefix_parser)
 
     return parser
 
 
-def extent_cmd(args: argparse.Namespace) -> None:
+def extent_cmd(args: argparse.Namespace) -> int:
     """Execute the extent subcommand."""
-    result = api_extent()
-    print(json.dumps(result.__dict__, indent=2))
+    try:
+        result = api_extent()
+    except CcngetError as exc:
+        fail(f"request failed: {exc}", EXIT_API, machine=_machine_mode(args))
+    except _requests.exceptions.RequestException as exc:
+        _handle_request_error(exc, args)
+
+    return emit(result.__dict__, render_extent, **_emit_kwargs(args))
 
 
-def surt_browse_cmd(args: argparse.Namespace) -> None:
+def surt_browse_cmd(args: argparse.Namespace) -> int:
     """Execute the surt-browse subcommand."""
     try:
         result = api_surt_browse(
@@ -308,46 +365,43 @@ def surt_browse_cmd(args: argparse.Namespace) -> None:
             limit=args.limit,
             offset=args.offset,
         )
+    except CcngetError as exc:
+        fail(f"request failed: {exc}", EXIT_API, machine=_machine_mode(args))
     except _requests.exceptions.RequestException as exc:
-        print(f"ccnget: {exc}", file=sys.stderr)
-        sys.exit(1)
+        _handle_request_error(exc, args)
 
-    print(json.dumps(result.__dict__, indent=2))
+    return emit(result.__dict__, render_surt_browse, **_emit_kwargs(args))
 
 
-def surt_prefix_cmd(args: argparse.Namespace) -> None:
+def surt_prefix_cmd(args: argparse.Namespace) -> int:
     """Execute the surt-prefix subcommand."""
     try:
         result = api_surt_prefix(
             args.prefix,
             limit=args.limit,
         )
+    except CcngetError as exc:
+        fail(f"request failed: {exc}", EXIT_API, machine=_machine_mode(args))
     except _requests.exceptions.RequestException as exc:
-        print(f"ccnget: {exc}", file=sys.stderr)
-        sys.exit(1)
+        _handle_request_error(exc, args)
 
     # Build a JSON-serialisable dict in the lookup output style
     output = {
         "surt_prefix": result.surt_prefix,
         "total_results": result.total_results,
         "limit": result.limit,
-        "results": [
-            {
-                "surt_key": e.surt_key,
-                "timestamp": e.timestamp,
-                "warc_path": e.warc_path,
-                "offset": e.offset,
-                "length": e.length,
-                **e.extra,
-            }
-            for e in result.results
-        ],
+        "results": [_entry_dict(e) for e in result.results],
     }
-    print(json.dumps(output, indent=2))
+    title = f"Captures under {result.surt_prefix}"
+    return emit(output, lambda p: render_lookup(title, p), **_emit_kwargs(args))
 
 
-def main(argv: Optional[list[str]] = None) -> None:
-    """Parse CLI arguments and dispatch to subcommands."""
+def main(argv: Optional[list[str]] = None) -> int:
+    """Parse CLI arguments and dispatch to subcommands.
+
+    Returns a typed exit code: 0 ok, 2 usage, 3 not found, 5 API error.
+    Error paths exit immediately via ccnget.output.fail().
+    """
     load_dotenv()
 
     args = get_parser().parse_args(argv)
@@ -360,20 +414,22 @@ def main(argv: Optional[list[str]] = None) -> None:
         level=numeric_level,
     )
 
+    code = 0
     if args.command == "lookup":
-        lookup_cmd(args)
+        code = lookup_cmd(args)
     elif args.command == "retrieve":
-        retrieve_cmd(args)
+        code = retrieve_cmd(args)
     elif args.command == "fetch":
-        fetch_cmd(args)
+        code = fetch_cmd(args)
     elif args.command == "config":
-        config_cmd(args)
+        code = config_cmd(args)
     elif args.command == "extent":
-        extent_cmd(args)
+        code = extent_cmd(args)
     elif args.command == "surt-browse":
-        surt_browse_cmd(args)
+        code = surt_browse_cmd(args)
     elif args.command == "surt-prefix":
-        surt_prefix_cmd(args)
+        code = surt_prefix_cmd(args)
+    return code
 
 
 # main() idiom for importing into REPL for debugging

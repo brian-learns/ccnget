@@ -129,6 +129,50 @@ ace.aaa.com):
 uv run ccnget surt-prefix com,aa --limit 20
 ```
 
+### Output Modes
+
+The JSON-producing subcommands (`lookup`, `extent`, `surt-browse`,
+`surt-prefix`) pick their output format automatically: an interactive
+terminal gets a colored table, and piped output gets pretty JSON. All of
+it can be overridden per command:
+
+```bash
+uv run ccnget lookup "http://example.com" --json        # pretty JSON
+uv run ccnget lookup "http://example.com" --compact     # minified one-line JSON
+uv run ccnget extent --table                            # force the table view
+```
+
+`--select` plucks a single value out of the result with dot notation and
+prints it raw (no envelope, no table) — handy for agents and shell
+pipelines:
+
+```bash
+uv run ccnget lookup "http://example.com" --select results.0.warc_path
+uv run ccnget surt-prefix com,aa --select results.warc_path   # maps over the list
+uv run ccnget extent --select file_extent
+```
+
+A bare name addresses a top-level field; `results.0.field` indexes a
+specific entry; a bare field name after a list maps over every entry and
+returns a JSON array.
+
+`fetch` and `retrieve` always write raw page/WARC bytes to stdout (or
+`-o FILE`) and are unaffected by these flags.
+
+### Exit Codes
+
+Commands exit with typed codes so scripts and agents can branch on them:
+
+| Code | Meaning |
+|------|---------|
+| 0 | success (an empty result set is success) |
+| 2 | usage error (bad flags, bad `--select` path) |
+| 3 | not found (no index match) |
+| 5 | API error (network failure or server error) |
+
+In `--json`/`--compact`/`--select` context, errors are reported as a
+single-line JSON object on stderr: `{"status":"error","code":5,"error":"..."}`.
+
 ## Environment
 
  * **`CDX_URL`** The base URL for the CDX index server.
