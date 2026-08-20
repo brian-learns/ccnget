@@ -215,6 +215,18 @@ def _dedupe_paragraphs(text: str) -> str:
 # ── Extraction levels ─────────────────────────────────────────────────────
 
 
+def _apply_target_uri(meta: dict[str, Any], warc_headers: dict[str, str]) -> None:
+    """Prefer the WARC-Target-URI (the original crawled URL) over the requested one.
+
+    The CDX SURT key is a lossy transform (redirects, trailing slashes, and
+    scheme are not preserved), so the WARC record header is the authoritative
+    source for the original URL.
+    """
+    target = warc_headers.get("WARC-Target-URI")
+    if target:
+        meta["url"] = target
+
+
 def _extract_level_1(payload: bytes, url: str):
     """Level 1: full trafilatura extraction with metadata (Document or None)."""
     try:
@@ -260,6 +272,130 @@ def _extract_level_3(payload: bytes) -> Optional[str]:
 # ── Public API ────────────────────────────────────────────────────────────
 
 
+def extract(
+    payload: bytes,
+    *,
+    url: str,
+    timestamp: str = "",
+    warc_path: str = "",
+    surt_key: str = "",
+    http_headers: dict[str, str] | None = None,
+    warc_headers: dict[str, str] | None = None,
+) -> ArticleResult:
+    """Run the 3-level extraction fallback over a retrieved WARC payload.
+
+    This is the core behind :func:`article` and the TUI Reader. It takes an
+    already-retrieved payload so callers can pick a *specific* capture (from a
+    scan/lookup row) rather than letting :func:`api_fetch` re-resolve the
+    first result for a URL.
+
+    Parameters
+    ----------
+    payload : bytes
+        Raw WARC response body (typically HTML).
+    url : str
+        URL that was requested / that the capture belongs to.
+    timestamp : str
+        WARC timestamp (YYYYMMDDhhmmss) from the CDX index.
+    warc_path : str
+        Path of the WARC file (from the CDX index).
+    surt_key : str
+        SURT key from the CDX index.
+    http_headers : dict[str, str] | None
+        HTTP headers from inside the WARC record (if available).
+    warc_headers : dict[str, str] | None
+        WARC record headers. ``WARC-Target-URI`` (the original crawled URL)
+        is preferred over *url* in the resulting metadata.
+
+    Returns
+    -------
+    ArticleResult
+    """
+    http_headers = http_headers or {}
+    warc_headers = warc_headers or {}
+
+    doc = _extract_level_1(payload, url)
+    if doc is not None:
+        meta = _extract_metadata(doc, url, timestamp, 1)
+        _apply_target_uri(meta, warc_headers)
+        return ArticleResult(
+            url=url,
+            payload=payload,
+            http_headers=http_headers,
+            warc_headers=warc_headers,
+            surt_key=surt_key,
+            timestamp=timestamp,
+            warc_path=warc_path,
+            metadata=meta,
+            body=_split_frontmatter(doc.text) if doc.text else "",
+            fallback_level=1,
+        )
+
+    text = _extract_level_2(payload)
+    if text is not None:
+        meta = {"url": url, "date": _format_timestamp(timestamp)}
+        title = _title_from_url(url)
+        if title:
+            meta["title"] = title
+        language = _detect_language(text)
+        if language:
+            meta["language"] = language
+        _apply_target_uri(meta, warc_headers)
+        return ArticleResult(
+            url=url,
+            payload=payload,
+            http_headers=http_headers,
+            warc_headers=warc_headers,
+            surt_key=surt_key,
+            timestamp=timestamp,
+            warc_path=warc_path,
+            metadata=meta,
+            body=_dedupe_paragraphs(text),
+            fallback_level=2,
+        )
+
+    raw_text = _extract_level_3(payload)
+    if raw_text is not None:
+        meta = {"url": url, "date": _format_timestamp(timestamp)}
+        title = _title_from_url(url)
+        if title:
+            meta["title"] = title
+        language = _detect_language(raw_text)
+        if language:
+            meta["language"] = language
+        _apply_target_uri(meta, warc_headers)
+        return ArticleResult(
+            url=url,
+            payload=payload,
+            http_headers=http_headers,
+            warc_headers=warc_headers,
+            surt_key=surt_key,
+            timestamp=timestamp,
+            warc_path=warc_path,
+            metadata=meta,
+            body=_dedupe_paragraphs(raw_text),
+            fallback_level=3,
+        )
+
+    # Nothing extractable: return the raw payload with empty body so the
+    # caller can still hand back the bytes (fetch --raw) or report a clear
+    # error for text formats.
+    meta = {"url": url, "date": _format_timestamp(timestamp)}
+    _apply_target_uri(meta, warc_headers)
+    return ArticleResult(
+        url=url,
+        payload=payload,
+        http_headers=http_headers,
+        warc_headers=warc_headers,
+        surt_key=surt_key,
+        timestamp=timestamp,
+        warc_path=warc_path,
+        metadata=meta,
+        body="",
+        fallback_level=0,
+    )
+
+
 def article(
     url: str,
     *,
@@ -292,88 +428,14 @@ def article(
     ArticleResult
     """
     result = api_fetch(url, exact=exact, at=at, cdx_url=cdx_url, base_url=base_url)
-    payload = result.payload
-    timestamp = result.timestamp
-
-    doc = _extract_level_1(payload, url)
-    if doc is not None:
-        return ArticleResult(
-            url=url,
-            payload=payload,
-            http_headers=result.http_headers,
-            warc_headers=result.warc_headers,
-            surt_key=result.surt_key,
-            timestamp=timestamp,
-            warc_path=result.warc_path,
-            metadata=_extract_metadata(doc, url, timestamp, 1),
-            body=_split_frontmatter(doc.text) if doc.text else "",
-            fallback_level=1,
-        )
-
-    text = _extract_level_2(payload)
-    if text is not None:
-        meta = {
-            "url": url,
-            "date": _format_timestamp(timestamp),
-        }
-        title = _title_from_url(url)
-        if title:
-            meta["title"] = title
-        language = _detect_language(text)
-        if language:
-            meta["language"] = language
-        return ArticleResult(
-            url=url,
-            payload=payload,
-            http_headers=result.http_headers,
-            warc_headers=result.warc_headers,
-            surt_key=result.surt_key,
-            timestamp=timestamp,
-            warc_path=result.warc_path,
-            metadata=meta,
-            body=_dedupe_paragraphs(text),
-            fallback_level=2,
-        )
-
-    raw_text = _extract_level_3(payload)
-    if raw_text is not None:
-        meta = {
-            "url": url,
-            "date": _format_timestamp(timestamp),
-        }
-        title = _title_from_url(url)
-        if title:
-            meta["title"] = title
-        language = _detect_language(raw_text)
-        if language:
-            meta["language"] = language
-        return ArticleResult(
-            url=url,
-            payload=payload,
-            http_headers=result.http_headers,
-            warc_headers=result.warc_headers,
-            surt_key=result.surt_key,
-            timestamp=timestamp,
-            warc_path=result.warc_path,
-            metadata=meta,
-            body=_dedupe_paragraphs(raw_text),
-            fallback_level=3,
-        )
-
-    # Nothing extractable: return the raw payload with empty body so the
-    # caller can still hand back the bytes (fetch --raw) or report a clear
-    # error for text formats.
-    return ArticleResult(
+    return extract(
+        result.payload,
         url=url,
-        payload=payload,
+        timestamp=result.timestamp,
+        warc_path=result.warc_path,
+        surt_key=result.surt_key,
         http_headers=result.http_headers,
         warc_headers=result.warc_headers,
-        surt_key=result.surt_key,
-        timestamp=timestamp,
-        warc_path=result.warc_path,
-        metadata={"url": url, "date": _format_timestamp(timestamp)},
-        body="",
-        fallback_level=0,
     )
 
 

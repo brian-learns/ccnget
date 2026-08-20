@@ -268,6 +268,20 @@ def _fetch_raw(args: argparse.Namespace) -> int:
     return 0
 
 
+def tui_cmd(args: argparse.Namespace) -> int:
+    """Execute the tui subcommand (Textual app; optional ``tui`` extra)."""
+    try:
+        from ccnget.tui import _tui_main
+    except ImportError:
+        fail(
+            "the TUI requires the optional 'tui' extra: install with `uv pip install 'ccnget[tui]'` "
+            "(or `pip install 'ccnget[tui]'`)",
+            EXIT_USAGE,
+            machine=False,
+        )
+    return _tui_main([f"--cdx-url={args.cdx_url}"] if args.cdx_url else [])
+
+
 def config_cmd(args: argparse.Namespace) -> int:
     """Execute the config subcommand (set/get/show/unset)."""
     if args.config_action == "set":
@@ -418,6 +432,17 @@ def get_parser() -> argparse.ArgumentParser:
     surt_prefix_parser.add_argument("--limit", type=limited_int, default=10, help="Limit value (1-100, default: 10)")
     _output_flags(surt_prefix_parser)
 
+    # tui subcommand (Textual terminal UI; optional 'tui' extra)
+    tui_parser = subparsers.add_parser(
+        "tui",
+        help="Interactive TUI: SURT tree browse, prefix scan, and article reader (requires the 'tui' extra)",
+    )
+    tui_parser.add_argument(
+        "--cdx-url",
+        default=None,
+        help="CDX server base URL override (default: config file > CDX_URL env > built-in)",
+    )
+
     return parser
 
 
@@ -505,6 +530,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         code = surt_browse_cmd(args)
     elif args.command == "surt-prefix":
         code = surt_prefix_cmd(args)
+    elif args.command == "tui":
+        code = tui_cmd(args)
     return code
 
 

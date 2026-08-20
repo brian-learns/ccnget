@@ -1,4 +1,4 @@
-.TH CCNGET "1" "2026\-08\-19" "ccnget 0.2.0.dev1" "Generated Python Manual"
+.TH CCNGET "1" "2026\-08\-20" "ccnget 0.2.0.dev1" "Generated Python Manual"
 .SH NAME
 ccnget
 .SH SYNOPSIS
@@ -39,6 +39,9 @@ Browse hosts indexed on the server
 .TP
 \fBccnget\fR \fI\,surt\-prefix\/\fR
 Prefix search surts indexed on the server
+.TP
+\fBccnget\fR \fI\,tui\/\fR
+Interactive TUI: SURT tree browse, prefix scan, and article reader (requires the 'tui' extra)
 
 .SH COMMAND \fI\,'ccnget lookup'\/\fR
 usage: ccnget lookup [\-h] [\-\-exact] [\-\-at AT] [\-\-limit LIMIT] [\-\-json]
@@ -279,6 +282,14 @@ Force the human table view
 \fB\-\-select\fR \fI\,PATH\/\fR
 Extract a value with dot notation and print it raw: results.0.warc_path,
 results.warc_path (maps over the list), or a top\-level field like url
+
+.SH COMMAND \fI\,'ccnget tui'\/\fR
+usage: ccnget tui [\-h] [\-\-cdx\-url CDX_URL]
+
+.SH OPTIONS \fI\,'ccnget tui'\/\fR
+.TP
+\fB\-\-cdx\-url\fR \fI\,CDX_URL\/\fR
+CDX server base URL override (default: config file > CDX_URL env > built\-in)
 .SH ENVIRONMENT
 .TP
 .BI CDX_URL
