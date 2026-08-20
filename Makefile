@@ -59,7 +59,9 @@ testpackages:
 #mandoc: man doc
 mandoc: man
 
-man: man/ccnget.1
+PYTHON_SRCS := $(wildcard src/ccnget/*.py)
+
+man: pyproject.toml $(PYTHON_SRCS)
 	mkdir -p man
 	uv run argparse-manpage \
 		--module ccnget.geturl \
