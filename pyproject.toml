@@ -18,6 +18,11 @@ dependencies = [
     "warcio>=1.8.1",
 ]
 
+[project.optional-dependencies]
+tui = [
+    "textual>=0.80.0",
+]
+
 [project.scripts]
 ccnget = "ccnget.geturl:main"
 
@@ -32,6 +37,7 @@ dev = [
     "bandit>=1.9.4",
     "interrogate>=1.7.0",
     "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
     "refurb>=2.3.1",
     "ruff>=0.16.1",
     "sphinx>=9.1.0",
@@ -73,6 +79,9 @@ ignore-module = true
 
 [tool.ty]
 rules = { all = "error" }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [tool.uv]
 exclude-newer = "7 days"

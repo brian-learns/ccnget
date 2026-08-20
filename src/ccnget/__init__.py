@@ -39,7 +39,7 @@ from ccnget.api import (
     surt_browse,
     surt_prefix,
 )
-from ccnget.article import ArticleResult, article
+from ccnget.article import ArticleResult, article, extract
 from ccnget.config import (
     get_config,
     list_config,
@@ -61,6 +61,7 @@ __all__ = [
     "SurtScanResult",
     "article",
     "extent",
+    "extract",
     "fetch",
     "get_config",
     "list_config",

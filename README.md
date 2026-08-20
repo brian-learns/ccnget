@@ -173,6 +173,26 @@ ace.aaa.com):
 uv run ccnget surt-prefix com,aa --limit 20
 ```
 
+### TUI
+
+A terminal UI (built with [Textual](https://textual.textualize.io/)) with
+three tabs: **Browse** (walk the SURT host tree), **Scan** (prefix search
+over capture records), and **Reader** (extracted article: metadata +
+markdown). It requires the optional `tui` extra:
+
+```bash
+uv add "ccnget[tui]"
+uv run ccnget tui
+```
+
+Inside the TUI: `1`/`2`/`3` switch tabs, `enter` drills into a Browse row
+/ runs a Scan / fetches the selected Scan row into the Reader, `c` on a
+Browse row jumps to Scan with that pattern, `q` quits. The Reader also has
+a URL field for fetching any archived URL directly. The index base URL
+is resolved from config / `CDX_URL` / default (see [Config](#config)) and
+shown read-only in the header; if the server is unreachable at startup
+the TUI prints the error and exits 5.
+
 ### Output Modes
 
 The JSON-producing subcommands (`lookup`, `extent`, `surt-browse`,
@@ -213,6 +233,9 @@ Commands exit with typed codes so scripts and agents can branch on them:
 | 2 | usage error (bad flags, bad `--select` path) |
 | 3 | not found (no index match) |
 | 5 | API error (network failure or server error) |
+
+(`ccnget tui` exits 0 on a clean quit and 5 when the server is
+unreachable at startup.)
 
 In `--json`/`--compact`/`--select` context, errors are reported as a
 single-line JSON object on stderr: `{"status":"error","code":5,"error":"..."}`.
