@@ -250,6 +250,23 @@ single-line JSON object on stderr: `{"status":"error","code":5,"error":"..."}`.
 These variables can be set directly in your shell environment or defined
 in a local *.env* file.
 
+## Agent Skill
+
+An agent skill (SKILL.md format) describing `ccnget` ships with the package at
+[`src/ccnget/.agents/skills/ccnget/SKILL.md`](src/ccnget/.agents/skills/ccnget/SKILL.md)
+(installed as `ccnget/.agents/skills/ccnget/SKILL.md` inside site-packages).
+Many agent harnesses auto-discover skills from a local skills directory and
+inject them into the system prompt, so install it once and the agent knows
+the tool exists:
+
+```bash
+cp -r src/ccnget/.agents/skills/ccnget ~/.agents/skills/
+```
+
+Use whichever skills directory your agent supports, e.g.
+`~/.agents/skills/` (per-user, vendor-neutral), `~/.claude/skills/`
+(Claude Code), or `.claude/skills/` at a repo root (project-scoped).
+
 ## Diagram
 
 While most of this was vibe coded, I drew this architecture diagram in monodraw and came up with the basic approach.  Numbers are as of the first test retrospective build.  I'm not sure if I'm going to do prospective maintenance.
