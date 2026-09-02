@@ -1,6 +1,6 @@
 [project]
 name = "ccnget"
-version = "0.2.0"
+version = "0.2.1"
 description = "lookup urls and get files from Common Crawl News"
 readme = "README.md"
 authors = [
@@ -43,6 +43,7 @@ dev = [
     "sphinx>=9.1.0",
     "ty>=0.0.70",
     "vulture>=2.16",
+    "textual>=0.80.0",
 ]
 
 [tool.build_manpages]
@@ -51,6 +52,7 @@ manpages = [
 ]
 [tool.ruff]
 line-length = 120
+extend-exclude = [".agents"]
 
 [tool.ruff.lint]
 select = [
