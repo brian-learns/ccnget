@@ -50,12 +50,20 @@ def _load_config() -> dict[str, str]:
     return {}
 
 
+def _write_config(data: dict[str, str]) -> None:
+    """Write the config file with owner-only permissions (0600)."""
+    fd = os.open(CONFIG_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        os.fchmod(fd, 0o600)  # also tighten a pre-existing file
+        f.write(json.dumps(data, indent=2) + "\n")
+
+
 def _save_config(settings: dict[str, str]) -> None:
     """Merge *settings* into the config file (idempotent)."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     current = _load_config()
     current.update(settings)
-    CONFIG_FILE.write_text(json.dumps(current, indent=2) + "\n")
+    _write_config(current)
     logger.debug("Wrote config to %s", CONFIG_FILE)
 
 
@@ -64,7 +72,7 @@ def _unset_config(key: str) -> None:
     current = _load_config()
     if key in current:
         del current[key]
-        CONFIG_FILE.write_text(json.dumps(current, indent=2) + "\n")
+        _write_config(current)
         logger.debug("Unset %s from %s", key, CONFIG_FILE)
 
 

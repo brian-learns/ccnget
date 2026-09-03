@@ -11,7 +11,6 @@ dependencies = [
     "iso639-lang>=2.6.3",
     "langdetect>=1.0.9",
     "platformdirs>=4.11.2",
-    "python-dotenv>=1.1.0",
     "requests>=2.31.0",
     "rich>=15.0.0",
     "trafilatura>=2.2.0",

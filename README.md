@@ -247,8 +247,8 @@ single-line JSON object on stderr: `{"status":"error","code":5,"error":"..."}`.
  * **`CC_CRAWL_BASE_URL`** The base URL for downloading Common Crawl data.
    * Default: *`https://data.commoncrawl.org`*
 
-These variables can be set directly in your shell environment or defined
-in a local *.env* file.
+These variables can be set directly in your shell environment or persistently
+via `ccnget config set <key> <value>`.
 
 ## Agent Skill
 

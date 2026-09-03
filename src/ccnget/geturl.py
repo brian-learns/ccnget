@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, NoReturn, Optional
 
 import requests as _requests
-from dotenv import load_dotenv
 
 from ccnget.api import CcngetError, LookupEntry, NotFoundError
 from ccnget.api import extent as api_extent
@@ -503,8 +502,6 @@ def main(argv: Optional[list[str]] = None) -> int:
     Returns a typed exit code: 0 ok, 2 usage, 3 not found, 5 API error.
     Error paths exit immediately via ccnget.output.fail().
     """
-    load_dotenv()
-
     args = get_parser().parse_args(argv)
 
     # set debugging level

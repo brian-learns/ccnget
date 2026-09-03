@@ -23,6 +23,7 @@ Exit codes (Printing Press convention):
 from __future__ import annotations
 
 import json
+import re
 import sys
 from typing import Any, Callable, NoReturn
 
@@ -90,11 +91,21 @@ def apply_select(data: Any, path: str) -> Any:
     return target
 
 
+# ANSI escape sequences interpreted by terminals (CSI, OSC, and single-char
+# Fe/Fn sequences). Stripped from raw --select output so untrusted result
+# values cannot inject terminal control sequences.
+_ANSI_RE = re.compile(
+    r"\x1b\[[0-9;?]*[ -/]*[@-~]"  # CSI
+    r"|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)"  # OSC
+    r"|\x1b[@-Z\\-_]"  # two-char sequences
+)
+
+
 def _select_value_to_text(value: Any) -> str:
     """Render an extracted --select value: JSON for containers, bare text for scalars."""
     if isinstance(value, (dict, list)):
         return json.dumps(value, indent=2)
-    return str(value)
+    return _ANSI_RE.sub("", str(value))
 
 
 def _entry_row(entry: dict[str, Any]) -> list[str]:

@@ -1,13 +1,13 @@
 """Pytest configuration for ccnget tests.
 
-Resets environment variables that may have been set by load_dotenv()
-when main() is invoked during earlier tests.
+Isolates environment variables that may be set in the developer's
+shell, so config resolution tests see a clean environment.
 """
 
 import os
 import pytest
 
-# Env vars that load_dotenv() may set from the project .env file
+# Env vars that ccnget reads from the environment
 _CC_ENV_VARS = ("CDX_URL", "CC_CRAWL_BASE_URL")
 
 

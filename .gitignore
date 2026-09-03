@@ -11,4 +11,3 @@ wheels/
 
 # Environment variables (local overrides)
 .env*
-!.env.example

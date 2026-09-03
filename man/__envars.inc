@@ -8,4 +8,5 @@ Default: \fIhttps://brian-learns-cc-news-cdx-server.hf.space/\fR
 The base URL for downloading Common Crawl data. 
 Default: \fIhttps://data.commoncrawl.org\fR
 .PP
-These variables can be set directly in your shell environment or defined in a local \fI.env\fR file.
+These variables can be set directly in your shell environment or persistently
+via \fIccnget config set <key> <value>\fR.
