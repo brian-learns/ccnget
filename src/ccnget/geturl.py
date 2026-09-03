@@ -508,7 +508,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = get_parser().parse_args(argv)
 
     # set debugging level
-    numeric_level: Optional[int] = getattr(logging, args.loglevel.upper(), None)
+    numeric_level = getattr(logging, args.loglevel.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError("Invalid log level: %s" % args.loglevel)
     logging.basicConfig(
